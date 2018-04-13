@@ -20,6 +20,6 @@ class LoaderSupervisor extends Actor with ActorLogging {
       log.info(s"Started loading from $dataSource")
 
     case LoadShipment(shipment: Shipment) =>
-      log.info(s"Loaded shipment: $shipment")
+      log.info(s"Sending shipment from ${shipment.dataSource} to processing")
   }
 }
