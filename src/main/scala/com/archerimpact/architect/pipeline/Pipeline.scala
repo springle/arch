@@ -17,8 +17,9 @@ class PipelineSupervisor extends Actor with ActorLogging {
   override def receive = {
     case StartPipeline =>
       val loaderSupervisor = context.actorOf(LoaderSupervisor.props, "loader-supervisor")
-      val dummyDataSource = context.actorOf(DummyDataSource.props, "dummy-data-source")
-      loaderSupervisor ! LoaderSupervisor.StartLoading(dummyDataSource)
+      // val dummyDataSource = context.actorOf(DummyDataSource.props, "dummy-data-source")
+      val rmqDataSource = context.actorOf(RMQDataSource.props(), "rmq-data-source")
+      loaderSupervisor ! LoaderSupervisor.StartLoading(rmqDataSource)
   }
 }
 
@@ -32,3 +33,4 @@ object Pipeline extends App {
     system.terminate()
   }
 }
+

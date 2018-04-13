@@ -6,8 +6,8 @@ abstract class Shipment {
 }
 
 /* A dummy Shipment for testing */
-class DummyShipment extends Shipment {
-  val dataSource = "DummySource"
-  val data = "DummyData"
-}
+class DummyShipment(
+                    val dataSource: String = "DummySource",
+                    val data: String = "DummyData"
+                   ) extends Shipment
 
