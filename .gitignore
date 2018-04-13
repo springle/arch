@@ -4,3 +4,4 @@ target/
 *.pdf
 *.tex
 *~
+*.iml
