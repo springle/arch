@@ -18,7 +18,7 @@ class PipelineSupervisor extends Actor with ActorLogging {
 
   override def postStop(): Unit = log.info("PipelineSupervisor stopped")
 
-  override def receive = {
+  override def receive: PartialFunction[Any, Unit] = {
     case StartPipeline =>
       val dummyParser = context.actorOf(DummyParser.props, "dummy-parser")
       val loader = context.actorOf(Loader.props(dummyParser), "loader")

@@ -24,7 +24,7 @@ class Loader(
 
   override def postStop(): Unit = log.info("Loader stopped")
 
-  override def receive = {
+  override def receive: PartialFunction[Any, Unit] = {
     case StartLoading(dataSource: ActorRef) =>
       dataSource ! DataSource.StartSending(self)
       log.info(s"Started loading from $dataSource")

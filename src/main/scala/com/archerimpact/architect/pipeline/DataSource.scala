@@ -34,7 +34,7 @@ class RMQDataSource(
                      val exchange: String
                    ) extends DataSource {
 
-  override def receive = {
+  override def receive: PartialFunction[Any, Unit] = {
 
     case StartSending(target: ActorRef) =>
       def setupSubscriber(channel: Channel, self: ActorRef) = {
@@ -48,19 +48,19 @@ class RMQDataSource(
 
   def fromBytes(x: Array[Byte]) = new String(x, "UTF-8")
 
-  def setupConsumer(channel: Channel, target: ActorRef) = {
+  private def setupConsumer(channel: Channel, target: ActorRef) = {
     new DefaultConsumer(channel) {
       override def handleDelivery(consumerTag: String,
                                   envelope: Envelope,
                                   properties: BasicProperties,
-                                  body: Array[Byte]) = {
+                                  body: Array[Byte]): Unit = {
         val dataFormat = properties.getHeaders.get("dataFormat").toString
         target ! Loader.PackageShipment(url=fromBytes(body), dataFormat=dataFormat)
       }
     }
   }
 
-  def setupConnection: ActorRef = {
+  private def setupConnection: ActorRef = {
     val factory = new ConnectionFactory()
     factory.setUsername(username)
     factory.setPassword(password)
@@ -80,7 +80,7 @@ object DummyDataSource {
 }
 
 class DummyDataSource extends DataSource {
-  override def receive = {
+  override def receive: PartialFunction[Any, Unit] = {
     case StartSending(target: ActorRef) =>
       for (_ <- 0 to 10)
         target ! Loader.PackageShipment(url="dum://my.source", dataFormat="dummy")

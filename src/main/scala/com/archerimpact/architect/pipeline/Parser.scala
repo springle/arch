@@ -27,7 +27,7 @@ class DummyParser extends Parser {
 
   override def postStop(): Unit = log.info("DummyParser stopped")
 
-  override def receive = {
+  override def receive: PartialFunction[Any, Unit] = {
     case ParseShipment(shipment: Shipment) =>
       log.info(s"Parsing ${shipment.dataFormat} shipment from ${shipment.url}: ${shipment.data}")
   }
