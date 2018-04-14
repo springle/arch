@@ -34,17 +34,6 @@ class RMQDataSource(
                      val exchange: String
                    ) extends DataSource {
 
-  def fromBytes(x: Array[Byte]) = new String(x, "UTF-8")
-
-  def setupConnection: ActorRef = {
-    val factory = new ConnectionFactory()
-    factory.setUsername(username)
-    factory.setPassword(password)
-    factory.setHost(host)
-    factory.setPort(port)
-    context.actorOf(ConnectionActor.props(factory), "rmq-connection")
-  }
-
   override def receive = {
 
     case StartSending(target: ActorRef) =>
@@ -61,8 +50,20 @@ class RMQDataSource(
         }
         channel.basicConsume(queue, true, consumer)
       }
+
       setupConnection ! CreateChannel(ChannelActor.props(setupSubscriber), Some("subscriber"))
       log.info(s"Subscribing to ${exchange}")
+  }
+
+  def fromBytes(x: Array[Byte]) = new String(x, "UTF-8")
+
+  def setupConnection: ActorRef = {
+    val factory = new ConnectionFactory()
+    factory.setUsername(username)
+    factory.setPassword(password)
+    factory.setHost(host)
+    factory.setPort(port)
+    context.actorOf(ConnectionActor.props(factory), "rmq-connection")
   }
 
 }

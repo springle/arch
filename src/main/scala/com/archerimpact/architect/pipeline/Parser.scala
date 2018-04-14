@@ -8,6 +8,7 @@ object Parser {
 
 }
 
+
 trait Parser extends Actor with ActorLogging
 
 /* ------------------------------ */
@@ -19,9 +20,11 @@ object DummyParser {
 }
 
 class DummyParser extends Parser {
+
   import Parser._
 
   override def preStart(): Unit = log.info("DummyParser started")
+
   override def postStop(): Unit = log.info("DummyParser stopped")
 
   override def receive = {
