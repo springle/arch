@@ -5,17 +5,13 @@ import scala.io.StdIn
 
 object PipelineSupervisor {
   def props: Props = Props(new PipelineSupervisor)
-
   final case object StartPipeline
-
 }
 
 class PipelineSupervisor extends Actor with ActorLogging {
-
   import PipelineSupervisor._
 
   override def preStart(): Unit = log.info("PipelineSupervisor started")
-
   override def postStop(): Unit = log.info("PipelineSupervisor stopped")
 
   override def receive: PartialFunction[Any, Unit] = {

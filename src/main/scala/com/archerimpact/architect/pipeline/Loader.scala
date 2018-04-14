@@ -7,22 +7,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 object Loader {
   def props(parser: ActorRef): Props = Props(new Loader(parser))
-
   final case class StartLoading(dataSource: ActorRef)
-
   final case class PackageShipment(url: String, dataFormat: String)
-
 }
 
 class Loader(
               val parser: ActorRef
             ) extends Actor with ActorLogging {
-
   import Loader._
-
-  override def preStart(): Unit = log.info("Loader started")
-
-  override def postStop(): Unit = log.info("Loader stopped")
 
   override def receive: PartialFunction[Any, Unit] = {
     case StartLoading(dataSource: ActorRef) =>
