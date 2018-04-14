@@ -1,4 +1,4 @@
-package com.archerimpact.architect.pipeline
+package com.archerimpact.architect.keystone
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import scala.concurrent.Future

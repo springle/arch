@@ -1,7 +1,7 @@
-package com.archerimpact.architect.pipeline
+package com.archerimpact.architect.keystone
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import com.archerimpact.architect.pipeline.DataSource.StartSending
+import com.archerimpact.architect.keystone.DataSource.StartSending
 import com.newmotion.akka.rabbitmq._
 
 object DataSource {
