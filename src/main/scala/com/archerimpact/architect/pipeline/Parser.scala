@@ -1,6 +1,6 @@
 package com.archerimpact.architect.pipeline
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{Actor, ActorLogging, Props}
 
 object Parser {
 
@@ -29,6 +29,6 @@ class DummyParser extends Parser {
 
   override def receive = {
     case ParseShipment(shipment: Shipment) =>
-      log.info(s"Parsing shipment from ${shipment.dataSource}")
+      log.info(s"Parsing ${shipment.dataFormat} shipment from ${shipment.url}: ${shipment.data}")
   }
 }
