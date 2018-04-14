@@ -10,14 +10,7 @@ object DataSource {
 
 }
 
-trait DataSource extends Actor with ActorLogging {
-
-  import DataSource._
-
-  override def receive = {
-    case StartSending => ???
-  }
-}
+trait DataSource extends Actor with ActorLogging
 
 /* ---------------------------------------- */
 /* A DataSource for consuming from RabbitMQ */
@@ -63,7 +56,7 @@ class RMQDataSource(
                                       envelope: Envelope,
                                       properties: BasicProperties,
                                       body: Array[Byte]) = {
-            target ! LoaderSupervisor.LoadShipment(new DummyShipment(dataSource = "rmq", data = fromBytes(body)))
+            target ! Loader.LoadShipment(new DummyShipment(dataSource = "rmq", data = fromBytes(body)))
           }
         }
         channel.basicConsume(queue, true, consumer)
@@ -83,12 +76,9 @@ object DummyDataSource {
 }
 
 class DummyDataSource extends DataSource {
-
-  import DataSource._
-
   override def receive = {
     case StartSending(target: ActorRef) =>
       for (_ <- 0 to 10)
-        target ! LoaderSupervisor.LoadShipment(new DummyShipment())
+        target ! Loader.LoadShipment(new DummyShipment())
   }
 }

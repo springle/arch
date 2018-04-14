@@ -2,17 +2,19 @@ package com.archerimpact.architect.pipeline
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 
-object LoaderSupervisor {
-  def props: Props = Props(new LoaderSupervisor)
+object Loader {
+  def props(parser: ActorRef): Props = Props(new Loader(parser))
   final case class StartLoading(dataSource: ActorRef)
   final case class LoadShipment(shipment: Shipment)
 }
 
-class LoaderSupervisor extends Actor with ActorLogging {
-  import LoaderSupervisor._
+class Loader(
+            val parser: ActorRef
+            ) extends Actor with ActorLogging {
+  import Loader._
 
-  override def preStart(): Unit = log.info("LoaderSupervisor started")
-  override def postStop(): Unit = log.info("LoaderSupervisor stopped")
+  override def preStart(): Unit = log.info("Loader started")
+  override def postStop(): Unit = log.info("Loader stopped")
 
   override def receive = {
     case StartLoading(dataSource: ActorRef) =>
@@ -20,6 +22,7 @@ class LoaderSupervisor extends Actor with ActorLogging {
       log.info(s"Started loading from $dataSource")
 
     case LoadShipment(shipment: Shipment) =>
-      log.info(s"Sending shipment from ${shipment.dataSource} to processing")
+      parser ! Parser.ParseShipment(shipment)
+      log.info(s"Loading shipment from ${shipment.dataSource} for parsing")
   }
 }
