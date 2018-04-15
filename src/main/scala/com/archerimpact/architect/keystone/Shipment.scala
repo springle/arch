@@ -2,6 +2,10 @@ package com.archerimpact.architect.keystone
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.google.cloud.storage.Storage
+import com.google.cloud.storage.StorageOptions
+import com.google.cloud.storage.Blob
+
 
 object Shipment {
   def packageShipment(url: String, dataFormat: String): Future[Shipment] = url match {
@@ -24,8 +28,16 @@ class GCSShipment(
                  val url: String,
                  val dataFormat: String
                  ) extends Shipment {
-  def loadData = "test"  // TODO: actually load from GCS
-  val data: Any = loadData
+  def loadData: Any = {
+    val splitUrl = url.split("/").drop(2)
+    val bucketName = splitUrl(0)
+    val blobPath = splitUrl.drop(1).mkString("/")
+    val storage: Storage = StorageOptions.getDefaultInstance.getService
+    val blob: Blob = storage.get(bucketName, blobPath)
+    blob.getContent()
+  }
+
+  val data = loadData
 }
 
 /* ---------------------------- */

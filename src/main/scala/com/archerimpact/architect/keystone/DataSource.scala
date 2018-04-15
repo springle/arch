@@ -5,9 +5,7 @@ import com.archerimpact.architect.keystone.DataSource.StartSending
 import com.newmotion.akka.rabbitmq._
 
 object DataSource {
-
   final case class StartSending(target: ActorRef)
-
 }
 
 trait DataSource extends Actor with ActorLogging

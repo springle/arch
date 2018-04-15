@@ -17,16 +17,19 @@ class Loader(
   import Loader._
 
   override def receive: PartialFunction[Any, Unit] = {
+
     case StartLoading(dataSource: ActorRef) =>
       dataSource ! DataSource.StartSending(self)
       log.info(s"Started loading from $dataSource")
 
     case PackageShipment(url: String, dataFormat: String) =>
-      log.info(s"Packaging shipment from $url")
+      log.info(s"Packaging $dataFormat shipment from $url")
       val f: Future[Shipment] = Shipment.packageShipment(url, dataFormat)
+
       f onComplete {
         case Success(shipment: Shipment) => parser ! Parser.ParseShipment(shipment)
         case Failure(t) => log.error(s"Error when packaging $url: ${t.getMessage}")
       }
+
   }
 }
