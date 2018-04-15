@@ -33,18 +33,19 @@ class RMQDataSource(
                    ) extends DataSource {
 
   override def receive: PartialFunction[Any, Unit] = {
-
     case StartSending(target: ActorRef) =>
-      def setupSubscriber(channel: Channel, self: ActorRef) = {
-        val queue = channel.queueDeclare().getQueue
-        channel.queueBind(queue, exchange, "")
-        channel.basicConsume(queue, true, setupConsumer(channel, target))
-      }
-
-      setupConnection ! CreateChannel(ChannelActor.props(setupSubscriber), Some("subscriber"))
+      setupConnection ! CreateChannel(ChannelActor.props(setupSubscriber(target)), Some("subscriber"))
   }
 
   def fromBytes(x: Array[Byte]) = new String(x, "UTF-8")
+
+  private def setupSubscriber(target: ActorRef): (Channel, ActorRef) => Any = {
+    (channel: Channel, _: ActorRef) => {
+        val queue = channel.queueDeclare().getQueue
+        channel.queueBind(queue, exchange, "")
+        channel.basicConsume(queue, true, setupConsumer(channel, target))
+    }
+  }
 
   private def setupConsumer(channel: Channel, target: ActorRef) = {
     new DefaultConsumer(channel) {

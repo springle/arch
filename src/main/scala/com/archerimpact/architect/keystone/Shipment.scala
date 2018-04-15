@@ -37,7 +37,7 @@ class GCSShipment(
     blob.getContent()
   }
 
-  val data = loadData
+  val data: Any = loadData
 }
 
 /* ---------------------------- */
