@@ -1,6 +1,7 @@
 package com.archerimpact.architect.keystone
 
-import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+
 import scala.io.StdIn
 
 object PipelineSupervisor {
@@ -16,9 +17,14 @@ class PipelineSupervisor extends Actor with ActorLogging {
 
   override def receive: PartialFunction[Any, Unit] = {
     case StartPipeline =>
-      val dummyParser = context.actorOf(DummyParser.props, "dummy-parser")
-      val loader = context.actorOf(Loader.props(dummyParser), "loader")
-      val rmqDataSource = context.actorOf(RMQDataSource.props(), "rmq-data-source")
+      val connector: ActorRef =
+        context.actorOf(Connector.props, "connector")
+      val parserSupervisor: ActorRef =
+        context.actorOf(ParserSupervisor.props(connector), "parser-supervisor")
+      val loader: ActorRef =
+        context.actorOf(Loader.props(parserSupervisor), "loader")
+      val rmqDataSource: ActorRef =
+        context.actorOf(RMQDataSource.props(), "rmq-data-source")
       loader ! Loader.StartLoading(rmqDataSource)
   }
 }
