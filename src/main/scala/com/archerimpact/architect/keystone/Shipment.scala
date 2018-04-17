@@ -18,6 +18,8 @@ abstract class Shipment {
   val url: String                                // where is the data located
   val dataFormat: String                         // what format is it in
   val data: Any                                  // the actual data
+  val country: String                            // country of origin
+  val sourceName: String                         // name of source
 }
 
 /* ----------------------------------- */
@@ -28,8 +30,10 @@ class GCSShipment(
                  val url: String,
                  val dataFormat: String
                  ) extends Shipment {
-  def loadData: Any = {
-    val splitUrl = url.split("/").drop(2)
+
+  private val splitUrl = url.split("/").drop(2)
+
+  private def loadData = {
     val bucketName = splitUrl(0)
     val blobPath = splitUrl.drop(1).mkString("/")
     val storage: Storage = StorageOptions.getDefaultInstance.getService
@@ -38,6 +42,8 @@ class GCSShipment(
   }
 
   val data: Any = loadData
+  val country: String = splitUrl(1)
+  val sourceName: String = splitUrl.dropRight(1).last
 }
 
 /* ---------------------------- */
@@ -47,6 +53,8 @@ class GCSShipment(
 class DummyShipment(
                      val url: String = "dum://my.source",
                      val dataFormat: String = "dummy",
-                     val data: String = "dummyData"
+                     val data: String = "dummyData",
+                     val country: String = "dummy",
+                     val sourceName: String = "dummySource"
                    ) extends Shipment
 
