@@ -42,6 +42,7 @@ class RMQSourceActor(
   private def setupSubscriber(target: ActorRef): (Channel, ActorRef) => Any = {
     (channel: Channel, _: ActorRef) => {
         val queue = channel.queueDeclare().getQueue
+        channel.exchangeDeclare(exchange, "fanout")
         channel.queueBind(queue, exchange, "")
         channel.basicConsume(queue, true, setupConsumer(channel, target))
     }
@@ -54,6 +55,7 @@ class RMQSourceActor(
                                   properties: BasicProperties,
                                   body: Array[Byte]): Unit = {
         val dataFormat = properties.getHeaders.get("dataFormat").toString
+        context.parent ! KeystoneSupervisor.IncReceived
         target ! LoaderActor.PackageShipment(url=fromBytes(body), dataFormat=dataFormat)
       }
     }

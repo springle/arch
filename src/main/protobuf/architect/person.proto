@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package architect;
+
+import "scalapb/scalapb.proto";
+import "architect/phoneNumber.proto";
+
+option (scalapb.options) = {
+    package_name: "com.archerimpact.architect.ontology"
+    flat_package: true
+};
+
+message Person {
+    string title = 1;                     // Person's title (eg. "Mr.")
+    string firstName = 2;                 // Person's first name (eg. "Samuel")
+    string middleName = 3;                // Person's middle name (eg. "Robert")
+    string lastName = 4;                  // Person's last name (eg. "Pringle")
+    repeated string email = 6;            // Person's email addresses (eg. List("15springle@gmail.com"))
+    repeated PhoneNumber phones = 7;      // Person's phone numbers
+}

@@ -7,6 +7,7 @@ import scala.io.StdIn
 object KeystoneSupervisor {
   def props: Props = Props(new KeystoneSupervisor)
   final case object StartPipeline
+  final case object IncReceived
   final case object IncLoaded
   final case object IncParsed
   final case object IncDelivered
@@ -18,6 +19,7 @@ class KeystoneSupervisor extends Actor with ActorLogging {
   var loadedCount = 0
   var parsedCount = 0
   var deliveredCount = 0
+  var receivedCount = 0
 
   override def preStart(): Unit = log.info("Keystone pipeline started")
   override def postStop(): Unit = log.info("Keystone pipeline stopped")
@@ -31,17 +33,21 @@ class KeystoneSupervisor extends Actor with ActorLogging {
       val rmqSourceActor: ActorRef = context.actorOf(RMQSourceActor.props(), "rmq-source-actor")
       rmqSourceActor ! SourceActor.StartSending(loaderActor)
 
+    case IncReceived =>
+      receivedCount += 1
+      log.info(s"Received $receivedCount, Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
+
     case IncLoaded =>
       loadedCount += 1
-      log.info(s"Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
+      log.info(s"Received $receivedCount, Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
 
     case IncParsed =>
       parsedCount += 1
-      log.info(s"Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
+      log.info(s"Received $receivedCount, Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
 
     case IncDelivered =>
       deliveredCount += 1
-      log.info(s"Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
+      log.info(s"Received $receivedCount, Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
 
   }
 }

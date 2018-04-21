@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package architect;
+
+import "scalapb/scalapb.proto";
+
+option (scalapb.options) = {
+    package_name: "com.archerimpact.architect.ontology"
+    flat_package: true
+};
+
+message USAddress {
+    string streetNumber = 1;     // Street Number (eg. 125)
+    string streetName = 2;       // Street Name and Type (eg. Powell St)
+    string neighborhood = 3;     // Neighborhood Name (eg. Union Square)
+    string city = 4;             // City Name (eg. San Francisco)
+    string state = 5;            // State Two Letter Abbreviation (eg. CA)
+    string zip = 6;              // 5-digit Zip Code (eg. 06075)
+    string county = 7;           // County Name (eg. San Francisco)
+}
