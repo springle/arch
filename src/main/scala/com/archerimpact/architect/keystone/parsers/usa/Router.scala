@@ -9,14 +9,14 @@ object Router {
 
 class Router(connector: ActorRef) extends Actor {
 
-  val myOfacParser: ActorRef = context.actorOf(OfacParser.props(connector), "ofac-parser")
+  val myOfacParser: ActorRef = context.actorOf(OfacParserActor.props(connector), "ofac-parser")
 
   def routeShipment(shipment: Shipment): Unit = shipment match {
     case `shipment` if shipment.sourceName == "ofac" =>
-      myOfacParser ! Parser.ParseShipment(shipment)
+      myOfacParser ! ParserActor.ParseShipment(shipment)
   }
 
   override def receive: Receive = {
-    case Parser.ParseShipment(shipment) => routeShipment(shipment)
+    case ParserActor.ParseShipment(shipment) => routeShipment(shipment)
   }
 }

@@ -5,29 +5,23 @@ import scala.concurrent.Future
 import scala.util.{Success, Failure}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-object Loader {
-  def props(parser: ActorRef): Props = Props(new Loader(parser))
+object LoaderActor {
+  def props(parser: ActorRef): Props = Props(new LoaderActor(parser))
   final case class StartLoading(dataSource: ActorRef)
   final case class PackageShipment(url: String, dataFormat: String)
 }
 
-class Loader(
-              val parser: ActorRef
-            ) extends Actor with ActorLogging {
-  import Loader._
+class LoaderActor(val parser: ActorRef) extends Actor with ActorLogging {
+  import LoaderActor._
 
-  override def receive: PartialFunction[Any, Unit] = {
-
-    case StartLoading(dataSource: ActorRef) =>
-      dataSource ! DataSource.StartSending(self)
-      log.info(s"Started loading from $dataSource")
+  override def receive: Receive = {
 
     case PackageShipment(url: String, dataFormat: String) =>
       log.info(s"Packaging $dataFormat shipment from $url")
       val f: Future[Shipment] = Shipment.packageShipment(url, dataFormat)
 
       f onComplete {
-        case Success(shipment: Shipment) => parser ! Parser.ParseShipment(shipment)
+        case Success(shipment: Shipment) => parser ! ParserActor.ParseShipment(shipment)
         case Failure(t) => log.error(s"Error when packaging $url: ${t.getMessage}")
       }
 

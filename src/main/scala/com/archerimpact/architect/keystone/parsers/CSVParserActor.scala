@@ -7,7 +7,7 @@ import com.archerimpact.architect.keystone._
 /* A Parser for CSV files */
 /* ---------------------- */
 
-abstract class CSVParser(val connector: ActorRef) extends Parser(connector) {
+abstract class CSVParserActor(val connector: ActorRef) extends ParserActor(connector) {
 
   type EntityType <: Entity
 

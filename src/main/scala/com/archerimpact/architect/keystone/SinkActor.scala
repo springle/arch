@@ -2,14 +2,14 @@ package com.archerimpact.architect.keystone
 
 import akka.actor.{Actor, ActorLogging, Props}
 
-object Connector {
-  def props: Props = Props(new Connector)
+object SinkActor {
+  def props: Props = Props(new SinkActor)
   final case class ForwardGraph(graph: Graph)
 }
 
-class Connector extends Actor with ActorLogging
+class SinkActor extends Actor with ActorLogging
 {
-  import Connector._
+  import SinkActor._
 
   override def receive: PartialFunction[Any, Unit] = {
     case ForwardGraph(graph: Graph) =>

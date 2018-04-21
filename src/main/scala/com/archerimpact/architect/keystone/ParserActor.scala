@@ -10,12 +10,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /* An abstract Parser implementation */
 /* --------------------------------- */
 
-object Parser {
+object ParserActor {
   final case class ParseShipment(shipment: Shipment)
 }
 
-abstract class Parser(connector: ActorRef) extends Actor with ActorLogging {
-  import Parser._
+abstract class ParserActor(connector: ActorRef) extends Actor with ActorLogging {
+  import ParserActor._
 
   def parse(data: Any, url: String): Graph
 
@@ -27,7 +27,7 @@ abstract class Parser(connector: ActorRef) extends Actor with ActorLogging {
       log.info(s"Parsing ${shipment.dataFormat} shipment from ${shipment.url}")
       val f: Future[Graph] = parseShipment(shipment)
       f.onComplete {
-        case Success(graph: Graph) => connector ! Connector.ForwardGraph(graph)
+        case Success(graph: Graph) => connector ! SinkActor.ForwardGraph(graph)
         case Failure(t) => log.error(s"Error when parsing ${shipment.url}: ${t.getMessage}")
       }
   }
@@ -42,11 +42,11 @@ object ParserSupervisor {
 }
 
 class ParserSupervisor(val connector: ActorRef) extends Actor with ActorLogging {
-  import Parser._
+  import ParserActor._
   import parsers._
 
   val myUsaRouter: ActorRef = context.actorOf(usa.Router.props(connector), "usa-router")
-  val myDummyParser: ActorRef = context.actorOf(DummyParser.props(connector), "dummy-parser")
+  val myDummyParser: ActorRef = context.actorOf(DummyParserActor.props(connector), "dummy-parser")
 
   def routeShipment(shipment: Shipment): Unit = shipment match {
     case `shipment` if shipment.country == "dummy" =>
@@ -64,11 +64,11 @@ class ParserSupervisor(val connector: ActorRef) extends Actor with ActorLogging 
 /* A dummy Parser for testing */
 /* -------------------------- */
 
-object DummyParser {
-  def props(connector: ActorRef): Props = Props(new DummyParser(connector))
+object DummyParserActor {
+  def props(connector: ActorRef): Props = Props(new DummyParserActor(connector))
 }
 
-class DummyParser(val connector: ActorRef) extends Parser(connector) {
+class DummyParserActor(val connector: ActorRef) extends ParserActor(connector) {
   override def parse(data: Any, url: String): Graph =
     Graph(List(), List(), url)
 }

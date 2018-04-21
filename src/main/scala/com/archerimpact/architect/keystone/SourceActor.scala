@@ -1,38 +1,38 @@
 package com.archerimpact.architect.keystone
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import com.archerimpact.architect.keystone.DataSource.StartSending
+import com.archerimpact.architect.keystone.SourceActor.StartSending
 import com.newmotion.akka.rabbitmq._
 
-object DataSource {
+object SourceActor {
   final case class StartSending(target: ActorRef)
 }
 
-trait DataSource extends Actor with ActorLogging
+trait SourceActor extends Actor with ActorLogging
 
 /* ---------------------------------------- */
 /* A DataSource for consuming from RabbitMQ */
 /* ---------------------------------------- */
 
-object RMQDataSource {
+object RMQSourceActor {
   def props(
              username: String = "architect",
              password: String = "gotpublicdata",
              host: String = "localhost",
              port: Int = 5672,
-             exchange: String = "amq.fanout"
-           ): Props = Props(new RMQDataSource(username, password, host, port, exchange))
+             exchange: String = "sources"
+           ): Props = Props(new RMQSourceActor(username, password, host, port, exchange))
 }
 
-class RMQDataSource(
+class RMQSourceActor(
                      val username: String,
                      val password: String,
                      val host: String,
                      val port: Int,
                      val exchange: String
-                   ) extends DataSource {
+                   ) extends SourceActor {
 
-  override def receive: PartialFunction[Any, Unit] = {
+  override def receive: Receive = {
     case StartSending(target: ActorRef) =>
       setupConnection ! CreateChannel(ChannelActor.props(setupSubscriber(target)), Some("subscriber"))
   }
@@ -54,7 +54,7 @@ class RMQDataSource(
                                   properties: BasicProperties,
                                   body: Array[Byte]): Unit = {
         val dataFormat = properties.getHeaders.get("dataFormat").toString
-        target ! Loader.PackageShipment(url=fromBytes(body), dataFormat=dataFormat)
+        target ! LoaderActor.PackageShipment(url=fromBytes(body), dataFormat=dataFormat)
       }
     }
   }
@@ -74,14 +74,14 @@ class RMQDataSource(
 /* A dummy DataSource for testing */
 /* ------------------------------ */
 
-object DummyDataSource {
-  def props: Props = Props(new DummyDataSource)
+object DummySourceActor {
+  def props: Props = Props(new DummySourceActor)
 }
 
-class DummyDataSource extends DataSource {
-  override def receive: PartialFunction[Any, Unit] = {
+class DummySourceActor extends SourceActor {
+  override def receive: Receive = {
     case StartSending(target: ActorRef) =>
       for (_ <- 0 to 10)
-        target ! Loader.PackageShipment(url="dum://my.source", dataFormat="dummy")
+        target ! LoaderActor.PackageShipment(url="dum://my.source", dataFormat="dummy")
   }
 }

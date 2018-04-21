@@ -11,15 +11,4 @@ class KeystoneSpec() extends TestKit(ActorSystem("KeystoneSpec")) with ImplicitS
     TestKit.shutdownActorSystem(system)
   }
 
-  "A Loader actor" must {
-
-    "send a ParseShipment message" in {
-      val probe = TestProbe()
-      val loader = system.actorOf(Loader.props(probe.ref), "loader")
-      val dummyDataSource = system.actorOf(DummyDataSource.props, "dummy-data-source")
-      loader ! Loader.StartLoading(dummyDataSource)
-      probe.expectMsgType[Parser.ParseShipment]
-    }
-
-  }
 }

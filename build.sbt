@@ -1,4 +1,4 @@
-name := "architects"
+name := "keystone"
 
 version := "0.1"
 

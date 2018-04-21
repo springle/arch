@@ -26,10 +26,7 @@ abstract class Shipment {
 /* A Shipment for Google Cloud Storage */
 /* ----------------------------------- */
 
-class GCSShipment(
-                 val url: String,
-                 val dataFormat: String
-                 ) extends Shipment {
+class GCSShipment(val url: String, val dataFormat: String) extends Shipment {
 
   private val splitUrl = url.split("/").drop(2)
 
