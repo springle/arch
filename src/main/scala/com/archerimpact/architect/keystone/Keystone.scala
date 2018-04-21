@@ -23,24 +23,23 @@ class KeystoneSupervisor extends Actor with ActorLogging {
   override def postStop(): Unit = log.info("Keystone pipeline stopped")
 
   override def receive: PartialFunction[Any, Unit] = {
+
     case StartPipeline =>
-      val dummySinkActor: ActorRef =
-        context.actorOf(SinkActor.props, "dummy-sink-actor")
-      val parserActor: ActorRef =
-        context.actorOf(ParserSupervisor.props(dummySinkActor), "parser-supervisor")
-      val loaderActor: ActorRef =
-        context.actorOf(LoaderActor.props(parserActor), "loader-actor")
-      val rmqSourceActor: ActorRef =
-        context.actorOf(RMQSourceActor.props(), "rmq-source-actor")
+      val dummySinkActor: ActorRef = context.actorOf(SinkActor.props, "dummy-sink-actor")
+      val parserActor: ActorRef = context.actorOf(ParserSupervisor.props(dummySinkActor), "parser-supervisor")
+      val loaderActor: ActorRef = context.actorOf(LoaderActor.props(parserActor), "loader-actor")
+      val rmqSourceActor: ActorRef = context.actorOf(RMQSourceActor.props(), "rmq-source-actor")
       rmqSourceActor ! SourceActor.StartSending(loaderActor)
-    case IncLoaded =>
-      loadedCount += 1
-    case IncParsed =>
-      parsedCount += 1
+
+    case IncLoaded => loadedCount += 1
+
+    case IncParsed => parsedCount += 1
+
     case IncDelivered =>
       deliveredCount += 1
       if (deliveredCount % 10 == 0)
         log.info(s"Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
+
   }
 }
 
