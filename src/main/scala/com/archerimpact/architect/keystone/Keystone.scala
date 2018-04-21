@@ -31,14 +31,17 @@ class KeystoneSupervisor extends Actor with ActorLogging {
       val rmqSourceActor: ActorRef = context.actorOf(RMQSourceActor.props(), "rmq-source-actor")
       rmqSourceActor ! SourceActor.StartSending(loaderActor)
 
-    case IncLoaded => loadedCount += 1
+    case IncLoaded =>
+      loadedCount += 1
+      log.info(s"Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
 
-    case IncParsed => parsedCount += 1
+    case IncParsed =>
+      parsedCount += 1
+      log.info(s"Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
 
     case IncDelivered =>
       deliveredCount += 1
-      if (deliveredCount % 10 == 0)
-        log.info(s"Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
+      log.info(s"Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
 
   }
 }
