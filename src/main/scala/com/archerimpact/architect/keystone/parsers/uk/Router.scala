@@ -1,4 +1,4 @@
-package com.archerimpact.architect.keystone.parsers.usa
+package com.archerimpact.architect.keystone.parsers.uk
 
 import akka.actor.{Actor, ActorRef, Props}
 import com.archerimpact.architect.keystone._
@@ -9,13 +9,11 @@ object Router {
 
 class Router(connector: ActorRef) extends Actor {
 
-  val myOfacParser: ActorRef = context.actorOf(OfacParserActor.props(connector), "ofac-parser")
+  val myCompaniesHouseParser: ActorRef = context.actorOf(CompaniesHouseParserActor.props(connector), "companiesHouse-parser")
 
   def routeShipment(shipment: Shipment): Unit = shipment match {
-    case `shipment` if shipment.sourceName == "ofac" =>
-      myOfacParser ! ParserActor.ParseShipment(shipment)
-    case _ =>
-      println(shipment.sourceName)
+    case `shipment` if shipment.sourceName == "companies_house" =>
+      myCompaniesHouseParser ! ParserActor.ParseShipment(shipment)
   }
 
   override def receive: Receive = {

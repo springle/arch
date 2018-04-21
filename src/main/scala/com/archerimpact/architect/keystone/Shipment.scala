@@ -40,7 +40,7 @@ class GCSShipment(val url: String, val dataFormat: String) extends Shipment {
 
   val data: Any = loadData
   val country: String = splitUrl(1)
-  val sourceName: String = splitUrl.dropRight(1).last
+  val sourceName: String = splitUrl(2)
 }
 
 /* ---------------------------- */

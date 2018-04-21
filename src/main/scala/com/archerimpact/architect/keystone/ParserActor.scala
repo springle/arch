@@ -24,10 +24,12 @@ abstract class ParserActor(connector: ActorRef) extends Actor with ActorLogging 
 
   override def receive: PartialFunction[Any, Unit] = {
     case ParseShipment(shipment: Shipment) =>
-      log.info(s"Parsing ${shipment.dataFormat} shipment from ${shipment.url}")
+      // log.info(s"Parsing ${shipment.dataFormat} shipment from ${shipment.url}")
       val f: Future[Graph] = parseShipment(shipment)
       f.onComplete {
-        case Success(graph: Graph) => connector ! SinkActor.ForwardGraph(graph)
+        case Success(graph: Graph) =>
+          context.parent ! KeystoneSupervisor.IncParsed
+          connector ! SinkActor.ForwardGraph(graph)
         case Failure(t) => log.error(s"Error when parsing ${shipment.url}: ${t.getMessage}")
       }
   }
@@ -46,17 +48,21 @@ class ParserSupervisor(val connector: ActorRef) extends Actor with ActorLogging 
   import parsers._
 
   val myUsaRouter: ActorRef = context.actorOf(usa.Router.props(connector), "usa-router")
+  val myUkRouter: ActorRef = context.actorOf(uk.Router.props(connector), "uk-router")
   val myDummyParser: ActorRef = context.actorOf(DummyParserActor.props(connector), "dummy-parser")
 
   def routeShipment(shipment: Shipment): Unit = shipment match {
     case `shipment` if shipment.country == "dummy" =>
       myDummyParser ! ParseShipment(shipment)
+    case `shipment` if shipment.country == "uk" =>
+      myUkRouter ! ParseShipment(shipment)
     case `shipment` if shipment.country == "usa" =>
       myUsaRouter ! ParseShipment(shipment)
   }
 
   override def receive: Receive = {
     case ParseShipment(shipment: Shipment) => routeShipment(shipment)
+    case KeystoneSupervisor.IncParsed => context.parent ! KeystoneSupervisor.IncParsed
   }
 }
 
