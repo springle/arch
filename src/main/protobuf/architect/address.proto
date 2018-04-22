@@ -10,11 +10,11 @@ option (scalapb.options) = {
 };
 
 message USAddress {
-    string streetNumber = 1;     // Street Number (eg. 125)
-    string streetName = 2;       // Street Name and Type (eg. Powell St)
-    string neighborhood = 3;     // Neighborhood Name (eg. Union Square)
-    string city = 4;             // City Name (eg. San Francisco)
-    string state = 5;            // State Two Letter Abbreviation (eg. CA)
-    string zip = 6;              // 5-digit Zip Code (eg. 06075)
-    string county = 7;           // County Name (eg. San Francisco)
+    string streetNumber = 1;     // A Street Number (eg. 125)
+    string streetName = 2;       // A Street Name and Type (eg. Powell St)
+    string neighborhood = 3;     // A Neighborhood Name (eg. Union Square)
+    string city = 4;             // A City Name (eg. San Francisco)
+    string state = 5;            // A State Two Letter Abbreviation (eg. CA)
+    string zip = 6;              // A 5-digit Zip Code (eg. 06075)
+    string county = 7;           // A County Name (eg. San Francisco)
 }

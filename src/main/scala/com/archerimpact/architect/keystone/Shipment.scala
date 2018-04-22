@@ -1,5 +1,7 @@
 package com.archerimpact.architect.keystone
 
+import com.archerimpact.architect.keystone.parsers.Parser
+
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.cloud.storage.Storage
@@ -15,22 +17,27 @@ object Shipment {
 }
 
 abstract class Shipment {
-  val url: String                                // where is the data located
-  val dataFormat: String                         // what format is it in
-  val data: Any                                  // the actual data
-  val country: String                            // country of origin
-  val sourceName: String                         // name of source
+  val url: String                       // where is the data located (eg. "gs://archer-source-data/usa/ofac/sdn.csv")
+  val dataFormat: String                // what format is it in (eg. "csv")
+  val data: Any                         // the actual data
+  val country: String                   // country of origin (eg. "usa")
+  val sourceName: String                // name of source (eg. "ofac")
+  val options: Map[String, String]      // options for interactive parsers
+  val parser: Parser                    // instance of parser class for ParserActor to use
 }
 
 /* ----------------------------------- */
 /* A Shipment for Google Cloud Storage */
 /* ----------------------------------- */
 
-class GCSShipment(val url: String, val dataFormat: String) extends Shipment {
+class GCSShipment(val url: String,
+                  val dataFormat: String,
+                  val options: Map[String, String] = Map[String, String]()
+                 ) extends Shipment {
 
   private val splitUrl = url.split("/").drop(2)
 
-  private def loadData = {
+  private def loadData: Array[Byte] = {
     val bucketName = splitUrl(0)
     val blobPath = splitUrl.drop(1).mkString("/")
     val storage: Storage = StorageOptions.getDefaultInstance.getService
@@ -38,7 +45,14 @@ class GCSShipment(val url: String, val dataFormat: String) extends Shipment {
     blob.getContent()
   }
 
+  private def chooseParser: Parser = {
+    val suffix = splitUrl.drop(1).dropRight(1).mkString(".")
+    val parserLoc = "com.archerimpact.architect.keystone.parsers.countries." + suffix
+    Class.forName(parserLoc).getConstructor().newInstance().asInstanceOf[Parser]
+  }
+
   val data: Any = loadData
+  val parser: Parser = chooseParser
   val country: String = splitUrl(1)
   val sourceName: String = splitUrl(2)
 }
@@ -52,6 +66,8 @@ class DummyShipment(
                      val dataFormat: String = "dummy",
                      val data: String = "dummyData",
                      val country: String = "dummy",
-                     val sourceName: String = "dummySource"
+                     val sourceName: String = "dummySource",
+                     val options: Map[String, String] = Map[String, String](),
+                     val parser: Parser = new parsers.DummyParser
                    ) extends Shipment
 
