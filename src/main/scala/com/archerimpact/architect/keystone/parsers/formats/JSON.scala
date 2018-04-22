@@ -5,7 +5,7 @@ import com.archerimpact.architect.keystone.parsers.Parser
 
 class JSON extends Parser {
 
-  override def parse(data: Any, url: String): Graph = {
+  override def parse(data: Array[Byte], url: String): Graph = {
     Graph(List(), List(), url)
   }
 

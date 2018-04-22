@@ -7,7 +7,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 trait Parser {
 
-  def parse(data: Any, url: String): Graph
+  def parse(data: Array[Byte], url: String): Graph
 
   def parseShipment(shipment: Shipment): Future[Graph] =
     Future { parse(shipment.data, shipment.url) }
@@ -19,5 +19,5 @@ trait Parser {
 /* -------------------------- */
 
 class DummyParser extends Parser {
-  override def parse(data: Any, url: String): Graph = Graph(List(), List(), url)
+  override def parse(data: Array[Byte], url: String): Graph = Graph(List(), List(), url)
 }

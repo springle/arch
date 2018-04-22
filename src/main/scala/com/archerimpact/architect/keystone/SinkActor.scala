@@ -14,6 +14,7 @@ class SinkActor extends Actor with ActorLogging
   override def receive: PartialFunction[Any, Unit] = {
     case ForwardGraph(graph: Graph) =>
       context.parent ! KeystoneSupervisor.IncDelivered
-      // log.info(s"Forwarding graph from ${graph.url} to connectors")
+      for (entity <- graph.entities)
+        log.info(entity.toString)
   }
 }

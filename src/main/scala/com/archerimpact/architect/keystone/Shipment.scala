@@ -19,7 +19,7 @@ object Shipment {
 abstract class Shipment {
   val url: String                       // where is the data located (eg. "gs://archer-source-data/usa/ofac/sdn.csv")
   val dataFormat: String                // what format is it in (eg. "csv")
-  val data: Any                         // the actual data
+  val data: Array[Byte]                 // the actual data
   val country: String                   // country of origin (eg. "usa")
   val sourceName: String                // name of source (eg. "ofac")
   val options: Map[String, String]      // options for interactive parsers
@@ -51,8 +51,8 @@ class GCSShipment(val url: String,
     Class.forName(parserLoc).getConstructor().newInstance().asInstanceOf[Parser]
   }
 
-  val data: Any = loadData
   val parser: Parser = chooseParser
+  val data: Array[Byte] = loadData
   val country: String = splitUrl(1)
   val sourceName: String = splitUrl(2)
 }
@@ -64,7 +64,7 @@ class GCSShipment(val url: String,
 class DummyShipment(
                      val url: String = "dum://my.source",
                      val dataFormat: String = "dummy",
-                     val data: String = "dummyData",
+                     val data: Array[Byte] = "dummyData".getBytes,
                      val country: String = "dummy",
                      val sourceName: String = "dummySource",
                      val options: Map[String, String] = Map[String, String](),

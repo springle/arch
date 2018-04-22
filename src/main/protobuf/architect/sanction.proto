@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package architect;
+
+import "scalapb/scalapb.proto";
+
+option (scalapb.options) = {
+    package_name: "com.archerimpact.architect.ontology"
+    flat_package: true
+};
+
+message OFACSanction {
+    string entNum = 1;
+    string sdnName = 2;
+    string sdnType = 3;
+    string program = 4;
+    string title = 5;
+    string callSign = 6;
+    string vesselType = 7;
+    string tonnage = 8;
+    string grt = 9;
+    string vesselFlag = 10;
+    string vesselOwner = 11;
+    string remarks = 12;
+}
