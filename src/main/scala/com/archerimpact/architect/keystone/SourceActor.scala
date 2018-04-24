@@ -56,7 +56,7 @@ class RMQSourceActor(
                                   body: Array[Byte]): Unit = {
         val dataFormat = properties.getHeaders.get("dataFormat").toString
         context.parent ! KeystoneSupervisor.IncReceived
-        target ! LoaderActor.PackageShipment(url=fromBytes(body), dataFormat=dataFormat)
+        target ! LoaderPipe.PackageShipment(url=fromBytes(body), dataFormat=dataFormat)
       }
     }
   }
@@ -84,6 +84,6 @@ class DummySourceActor extends SourceActor {
   override def receive: Receive = {
     case StartSending(target: ActorRef) =>
       for (_ <- 0 to 10)
-        target ! LoaderActor.PackageShipment(url="dum://my.source", dataFormat="dummy")
+        target ! LoaderPipe.PackageShipment(url="dum://my.source", dataFormat="dummy")
   }
 }

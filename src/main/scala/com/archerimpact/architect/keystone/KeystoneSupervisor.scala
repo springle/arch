@@ -16,39 +16,30 @@ object KeystoneSupervisor {
 class KeystoneSupervisor extends Actor with ActorLogging {
   import KeystoneSupervisor._
 
+  var receivedCount = 0
   var loadedCount = 0
   var parsedCount = 0
   var deliveredCount = 0
-  var receivedCount = 0
 
-  override def preStart(): Unit = log.info("Keystone pipeline started")
-  override def postStop(): Unit = log.info("Keystone pipeline stopped")
+  override def preStart(): Unit = log.info("Keystone pipeline started.")
+  override def postStop(): Unit = log.info("Keystone pipeline stopped.")
+
+  def logStats(): Unit =
+    log.info(s"Received $receivedCount, Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
 
   override def receive: PartialFunction[Any, Unit] = {
 
     case StartPipeline =>
       val dummySinkActor: ActorRef = context.actorOf(SinkActor.props, "dummy-sink-actor")
-      val parserActor: ActorRef = context.actorOf(ParserActor.props(dummySinkActor), "parser-supervisor")
-      val loaderActor: ActorRef = context.actorOf(LoaderActor.props(parserActor), "loader-actor")
+      val parserActor: ActorRef = context.actorOf(ParserPipe.props(dummySinkActor), "parser-supervisor")
+      val loaderActor: ActorRef = context.actorOf(LoaderPipe.props(parserActor), "loader-actor")
       val rmqSourceActor: ActorRef = context.actorOf(RMQSourceActor.props(), "rmq-source-actor")
       rmqSourceActor ! SourceActor.StartSending(loaderActor)
 
-    case IncReceived =>
-      receivedCount += 1
-      log.info(s"Received $receivedCount, Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
-
-    case IncLoaded =>
-      loadedCount += 1
-      log.info(s"Received $receivedCount, Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
-
-    case IncParsed =>
-      parsedCount += 1
-      log.info(s"Received $receivedCount, Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
-
-    case IncDelivered =>
-      deliveredCount += 1
-      log.info(s"Received $receivedCount, Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
-
+    case IncReceived => receivedCount += 1; logStats()
+    case IncLoaded => loadedCount += 1; logStats()
+    case IncParsed => parsedCount += 1; logStats()
+    case IncDelivered => deliveredCount += 1; logStats()
   }
 }
 

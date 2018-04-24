@@ -1,6 +1,7 @@
 package com.archerimpact.architect.keystone.parsers
 
-import com.archerimpact.architect.keystone.{Graph, Shipment}
+import com.archerimpact.architect.keystone.Graph
+import com.archerimpact.architect.keystone.shipments.Shipment
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
