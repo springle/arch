@@ -1,6 +1,7 @@
 package com.archerimpact.architect.keystone
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+import com.archerimpact.architect.keystone.sinks.{ElasticSinkActor, Neo4jSinkActor, SinkActor}
 
 import scala.io.StdIn
 
@@ -24,13 +25,14 @@ class KeystoneSupervisor extends Actor with ActorLogging {
   override def preStart(): Unit = log.info("Keystone pipeline started")
   override def postStop(): Unit = log.info("Keystone pipeline stopped")
 
-  override def receive: PartialFunction[Any, Unit] = {
+  override def receive: Receive = {
 
     case StartPipeline =>
-      val dummySinkActor: ActorRef = context.actorOf(SinkActor.props, "dummy-sink-actor")
-      val parserActor: ActorRef = context.actorOf(ParserActor.props(dummySinkActor), "parser-supervisor")
-      val loaderActor: ActorRef = context.actorOf(LoaderActor.props(parserActor), "loader-actor")
-      val rmqSourceActor: ActorRef = context.actorOf(RMQSourceActor.props(), "rmq-source-actor")
+      val elasticSinkActor = context.actorOf(ElasticSinkActor.props(nextSink = None), "elastic-sink")
+      val neo4jSinkActor = context.actorOf(Neo4jSinkActor.props(nextSink = Some(elasticSinkActor)), "neo4j-sink")
+      val parserActor = context.actorOf(ParserActor.props(sink = neo4jSinkActor), "parser-supervisor")
+      val loaderActor = context.actorOf(LoaderActor.props(parser = parserActor), "loader-actor")
+      val rmqSourceActor = context.actorOf(RMQSourceActor.props(), "rmq-source-actor")
       rmqSourceActor ! SourceActor.StartSending(loaderActor)
 
     case IncReceived =>

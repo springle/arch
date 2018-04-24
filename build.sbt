@@ -14,10 +14,11 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion,
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-  "com.newmotion" %% "akka-rabbitmq" % "5.0.0",
-  "ch.qos.logback" % "logback-classic" % "1.2.3",
+  "org.neo4j.driver" % "neo4j-java-driver" % "1.4.4",
   "com.google.cloud" % "google-cloud-storage" % "1.24.1",
   "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
+  "com.newmotion" %% "akka-rabbitmq" % "5.0.0",
+  "ch.qos.logback" % "logback-classic" % "1.2.3",
   "com.univocity" % "univocity-parsers" % "2.6.3"
 )
 
