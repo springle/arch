@@ -1,8 +1,10 @@
 package com.archerimpact.architect.keystone
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
-import com.archerimpact.architect.keystone.sources.{RMQSource, SourceActor}
+import ch.qos.logback.classic.{Level, Logger}
 import com.archerimpact.architect.keystone.pipes._
+import com.archerimpact.architect.keystone.sources.{RMQSource, SourceActor}
+import org.slf4j.LoggerFactory
 
 object KeystoneSupervisor {
   def props: Props = Props(new KeystoneSupervisor)
@@ -60,6 +62,7 @@ class KeystoneSupervisor extends Actor with ActorLogging {
 }
 
 object Keystone extends App {
+  LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger].setLevel(Level.INFO)
   val system = ActorSystem("keystone-pipeline")
   val keystoneSupervisor = system.actorOf(KeystoneSupervisor.props, "keystone-supervisor")
   keystoneSupervisor ! KeystoneSupervisor.StartPipeline

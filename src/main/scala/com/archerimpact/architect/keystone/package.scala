@@ -7,7 +7,7 @@ package object keystone {
     (a, f) =>
       f.setAccessible(true)
       a + (f.getName -> f.get(cc))
-  }
+  }.filterNot(_._1.startsWith("_"))
   def getProtoType(cc: AnyRef): String = cc.getClass.getName.split("\\.").last
   def architectId(entity: Entity, graph: GraphShipment): String = s"${graph.url}/${entity.id}"
 }
