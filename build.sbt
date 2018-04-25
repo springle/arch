@@ -18,6 +18,7 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "com.google.cloud" % "google-cloud-storage" % "1.24.1",
   "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-  "com.univocity" % "univocity-parsers" % "2.6.3"
+  "com.univocity" % "univocity-parsers" % "2.6.3",
+  "net.liftweb" %% "lift-json" % "3.1.0"
 )
 
