@@ -1,7 +1,7 @@
 package com.archerimpact.architect.keystone.parsers.countries.usa
 
-import com.archerimpact.architect.keystone.Entity
 import com.archerimpact.architect.keystone.parsers.formats.CSV
+import com.archerimpact.architect.keystone.shipments.Entity
 import com.archerimpact.architect.ontology.OFACSanction
 
 class ofac extends CSV {

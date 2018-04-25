@@ -1,0 +1,11 @@
+* Keystone
+  
+The Keystone Pipeline is a data pipeline to build and maintain the
+state of "Archer World". See [[https://github.com/springle/keystone-tools][keystone-tools]] for companion tools.
+  
+#+BEGIN_SRC
+                  FileURL              RawFile       Graph        Graph          Graph
+                     /\------------------------------------------------------------------------\
+archerWorldSource -----|--> LoaderPipe -> ParserPipe -> Neo4jPipe -> ElasticPipe -> MatcherPipe |
+                     \/------------------------------------------------------------------------/
+#+END_SRC
