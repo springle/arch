@@ -1,77 +1,11 @@
-* Keystone Pipeline
+* Keystone
   
-*This README is a work in progress.*
-
-The Keystone Pipeline is a Scala framework for building data
-pipelines. It was built for Archer Architect, and designed to be
-easily extended or modified.
-
-** Actor Model
-
-Keystone is built using Akka Actors. Most of the actors in its
-hierarchy fall under ones of two categories: =SourceActor='s and
-=PipeActor='s. A =SourceActor= feeds URLs into the pipeline, and a
-=PipeActor= pushes data through the pipeline. =PipeActor='s can be
-composed to make almost any pipeline configuration. Furthermore,
-=SourceActor='s can be pointed at any =PipeActor= . They are not
-restricted to pipes at the "beginning" of the pipeline. These
-abstractions allow for quick prototyping and flexible architectures.
-
-** Shipments
-
-Shipments are another important concept in Keystone. Each =PipeActor=
-receives a =Shipment= , optionally transforms it, then forwards it to
-a list of zero or more "next pipes". A shipment is a generic concept
-to describe any data that might be passed from one =PipeActor= to
-another. Some examples might include a =FileURL= , a =RawFile= , or a
-=Graph= . Each of these =Shipment= objects carries a different kind of
-data.
-
-When a =PipeActor= receives a shipment, it runs a match statement
-agains the shipment type to determine how that shipment should be
-handled. For example, consider the =LoaderPipe= which extends
-=PipeActor= . The =LoaderPipe= looks for =FileURL= shipments, loads
-their contents into memory using objects from the =loaders= package,
-then forwards those contents as =RawFile= shipments to the list of
-"next pipes" (in this case, =nextPipes=List(parserPipe)=). The
-=ParserPipe= will translate =RawFile= shipments into =Graph=
-shipments, forward them to the =Neo4jPipe= , and so on.
-
-** Overview of Pipeline Architecture
-
-The full =SourceActor= and =PipeActor= configuration is summarized
-below:
-
+The Keystone Pipeline is a data pipeline to build and maintain the
+state of "Archer World".
+  
 #+BEGIN_SRC
                   FileURL              RawFile       Graph        Graph          Graph
                      /\------------------------------------------------------------------------\
 archerWorldSource -----|--> LoaderPipe -> ParserPipe -> Neo4jPipe -> ElasticPipe -> MatcherPipe |
                      \/------------------------------------------------------------------------/
 #+END_SRC
-
-Vew the source code for each of these components [[file:src/main/scala/com/archerimpact/architect/keystone/pipes/][here]].
-
-Although the current architecture only includes one =SourceActor= and
-a chain of single-connected =PipeActor='s , much more complex
-architectures are supported and will be used in the future. Note that
-the =Shipment= type at each stage in the pipeline is displayed over
-each arrow in the diagram above.
-
-** Keystone Ontology
-
-The primary function of Keystone is to transform a large quantity of
-files in a variety of formats into one cohesive graph-based view of
-the world. The types of entities that exist in this world-view are
-described precicely in [[file:src/main/protobuf/architect][protobufs]]. These protobufs are intended to be
-constantly evolving as the graph matures. Therefore, significant
-emphasis is based on future-proofing the messages described in these
-protobufs.
-
-These protobufs also provide a language-agnostic intermediate format
-in which to serialize parsed data. Serialized graphs for individual
-sources can be stored and diff'd to appropriately update entities and
-links as new versions of those sources are released.
-
-** TODO Parsing
-** TODO Neo4j & Elastic
-** TODO Matching
