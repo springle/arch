@@ -22,3 +22,10 @@ libraryDependencies ++= Seq(
   "com.univocity" % "univocity-parsers" % "2.6.3"
 )
 
+val elastic4sVersion = "6.2.5"
+libraryDependencies ++= Seq(
+  "com.sksamuel.elastic4s" %% "elastic4s-core" % elastic4sVersion,
+  "com.sksamuel.elastic4s" %% "elastic4s-http" % elastic4sVersion,
+  "com.sksamuel.elastic4s" %% "elastic4s-testkit" % elastic4sVersion % "test",
+  "com.sksamuel.elastic4s" %% "elastic4s-embedded" % elastic4sVersion % "test"
+)

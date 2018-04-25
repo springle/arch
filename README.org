@@ -6,6 +6,8 @@ The Keystone Pipeline is a Scala framework for building data
 pipelines. It was built for Archer Architect, and designed to be
 easily extended or modified.
 
+** PipeActor's and SourceActor's
+
 Keystone is built using Akka Actors. Most of the actors in its
 hierarchy fall under ones of two categories: =SourceActor='s and
 =PipeActor='s. A =SourceActor= feeds URLs into the pipeline, and a
@@ -64,3 +66,12 @@ described precicely in [[file:src/main/protobuf/architect][protobufs]]. These pr
 constantly evolving as the graph matures. Therefore, significant
 emphasis is based on future-proofing the messages described in these
 protobufs.
+
+These protobufs also provide a language-agnostic intermediate format
+in which to serialize parsed data. Serialized graphs for individual
+sources can be stored and diff'd to appropriately update entities and
+links as new versions of those sources are released.
+
+** TODO Parsing
+** TODO Neo4j & Elastic
+** TODO Matching

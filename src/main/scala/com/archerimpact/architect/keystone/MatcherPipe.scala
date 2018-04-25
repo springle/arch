@@ -10,7 +10,7 @@ object MatcherPipe {
 class MatcherPipe(nextPipes: List[ActorRef]) extends PipeActor(nextPipes) {
 
   override def processShipment(shipment: Shipment): Shipment = shipment match {
-    case graph: Graph => ???
+    case graph: Graph => log.error("TODO: implement matching"); graph
   }
 
   override def updateStats(): Unit = context.parent ! KeystoneSupervisor.IncMatched

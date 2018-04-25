@@ -17,10 +17,12 @@ class Neo4jPipe(nextPipes: List[ActorRef]) extends PipeActor(nextPipes) {
   val driver: Driver = GraphDatabase.driver(s"bolt://$host/$port")
   val session: Session = driver.session
 
+  def clean(s: Any): String = s.toString.replace("'", "")
+
   def uploadLinks(graph: Graph): Unit = {
     val queries = for (link <- graph.links) yield
-      s"MATCH (subj:${link.subj.proto.getClass.getName.split("\\.").last} {architectId:'${graph.url}/${link.subj.id}'}), " +
-      s"(obj:${link.obj.proto.getClass.getName.split("\\.").last} {architectId:'${graph.url}/${link.obj.id}'})\n" +
+      s"MATCH (subj:${getProtoType(link.subj.proto)} {architectId:'${graph.url}/${link.subj.id}'}), " +
+      s"(obj:${getProtoType(link.obj.proto)} {architectId:'${graph.url}/${link.obj.id}'})\n" +
       s"CREATE (subj)-[:${link.predicate}]->(obj)"
     for (query <- queries)
       session.run(query)
@@ -28,9 +30,9 @@ class Neo4jPipe(nextPipes: List[ActorRef]) extends PipeActor(nextPipes) {
 
   def uploadEntities(graph: Graph): Unit = {
     val queries = for (entity <- graph.entities) yield
-        s"CREATE (entity:${entity.proto.getClass.getName.split("\\.").last} " +
+        s"CREATE (entity:${getProtoType(entity.proto)} " +
         "{" + s"architectId:'${graph.url}/${entity.id}'," + getProtoParams(entity.proto).map { case (k, v) => k +
-        ":" + s"'${v.toString.replace("'", "")}'" }.mkString(",") + "})"
+        ":" + s"'${clean(v)}'" }.mkString(",") + "})"
     for (query <- queries)
       session.run(query)
   }
