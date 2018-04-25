@@ -1,7 +1,7 @@
 package com.archerimpact.architect.keystone.parsers.formats
 
-import com.archerimpact.architect.keystone.Graph
 import com.archerimpact.architect.keystone.parsers.Parser
+import com.archerimpact.architect.keystone.shipments.Graph
 
 class JSON extends Parser {
 

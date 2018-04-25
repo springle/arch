@@ -2,8 +2,8 @@ package com.archerimpact.architect.keystone.parsers.formats
 
 import java.io.ByteArrayInputStream
 
-import com.archerimpact.architect.keystone.{Entity, Graph}
 import com.archerimpact.architect.keystone.parsers.Parser
+import com.archerimpact.architect.keystone.shipments.{Entity, Graph}
 import com.univocity.parsers.csv.{CsvParser, CsvParserSettings}
 
 import scala.collection.JavaConverters._

@@ -1,5 +1,7 @@
 package com.archerimpact.architect.keystone.loaders
 
-class Loader {
+import com.archerimpact.architect.keystone.shipments.{FileURL, RawFile}
 
+trait Loader {
+  def fileURLtoRawFile(url: FileURL): RawFile
 }

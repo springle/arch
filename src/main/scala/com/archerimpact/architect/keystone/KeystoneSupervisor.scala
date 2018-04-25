@@ -1,8 +1,7 @@
 package com.archerimpact.architect.keystone
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
-
-import scala.io.StdIn
+import com.archerimpact.architect.keystone.sources.{RabbitMQ, SourceActor}
 
 object KeystoneSupervisor {
   def props: Props = Props(new KeystoneSupervisor)
@@ -10,47 +9,53 @@ object KeystoneSupervisor {
   final case object IncReceived
   final case object IncLoaded
   final case object IncParsed
-  final case object IncDelivered
+  final case object IncToNeo4j
+  final case object IncToElastic
+  final case object IncMatched
 }
 
 class KeystoneSupervisor extends Actor with ActorLogging {
   import KeystoneSupervisor._
 
-  var receivedCount = 0
-  var loadedCount = 0
-  var parsedCount = 0
-  var deliveredCount = 0
+  var received = 0
+  var loaded = 0
+  var parsed = 0
+  var toNeo4j = 0
+  var toElastic = 0
+  var matched = 0
 
   override def preStart(): Unit = log.info("Keystone pipeline started.")
   override def postStop(): Unit = log.info("Keystone pipeline stopped.")
 
   def logStats(): Unit =
-    log.info(s"Received $receivedCount, Loaded $loadedCount, Parsed $parsedCount, Delivered $deliveredCount")
+    log.info(
+      s"received:$received, " +
+      s"loaded:$loaded, " +
+      s"parsed:$parsed, " +
+      s"toNeo4j:$toNeo4j, " +
+      s"toElastic:$toElastic, " +
+      s"matched:$matched"
+    )
+
+  private val neo4jPipe = context.actorOf(Neo4jPipe.props(List[ActorRef]()), "neo4j-pipe")
+  private val parserPipe = context.actorOf(ParserPipe.props(List(neo4jPipe)), "parser-pipe")
+  private val loaderPipe = context.actorOf(LoaderPipe.props(List(parserPipe)), "loader-pipe")
+  private val archerWorldSourceActor = context.actorOf(RabbitMQ.props(loaderPipe), "archer-world-source")
 
   override def receive: PartialFunction[Any, Unit] = {
-
-    case StartPipeline =>
-      val dummySinkActor: ActorRef = context.actorOf(SinkActor.props, "dummy-sink-actor")
-      val parserActor: ActorRef = context.actorOf(ParserPipe.props(dummySinkActor), "parser-supervisor")
-      val loaderActor: ActorRef = context.actorOf(LoaderPipe.props(parserActor), "loader-actor")
-      val rmqSourceActor: ActorRef = context.actorOf(RMQSourceActor.props(), "rmq-source-actor")
-      rmqSourceActor ! SourceActor.StartSending(loaderActor)
-
-    case IncReceived => receivedCount += 1; logStats()
-    case IncLoaded => loadedCount += 1; logStats()
-    case IncParsed => parsedCount += 1; logStats()
-    case IncDelivered => deliveredCount += 1; logStats()
+    case StartPipeline => archerWorldSourceActor ! SourceActor.StartSending
+    case IncReceived => received += 1; logStats()
+    case IncLoaded => loaded += 1; logStats()
+    case IncParsed => parsed += 1; logStats()
+    case IncToNeo4j => toNeo4j += 1; logStats()
+    case IncToElastic => toElastic += 1; logStats()
+    case IncMatched => matched += 1; logStats()
   }
 }
 
 object Keystone extends App {
   val system = ActorSystem("keystone-pipeline")
-  try {
-    val keystoneSupervisor = system.actorOf(KeystoneSupervisor.props, "keystone-supervisor")
-    keystoneSupervisor ! KeystoneSupervisor.StartPipeline
-    StdIn.readLine()
-  } finally {
-    system.terminate()
-  }
+  val keystoneSupervisor = system.actorOf(KeystoneSupervisor.props, "keystone-supervisor")
+  keystoneSupervisor ! KeystoneSupervisor.StartPipeline
 }
 
