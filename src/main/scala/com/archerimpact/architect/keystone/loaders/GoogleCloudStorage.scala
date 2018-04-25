@@ -5,7 +5,7 @@ import com.archerimpact.architect.keystone.shipments.{FileURL, RawFile}
 import com.google.cloud.storage.{Blob, Storage, StorageOptions}
 
 object GoogleCloudStorage extends Loader {
-  override def fileURLtoRawFile(fileURL: FileURL): RawFile = {
+  override def fileURLToRawFile(fileURL: FileURL): RawFile = {
     val splitURL: Array[String] = fileURL.url.split("/").drop(2)
     new RawFile(
       url=fileURL.url,

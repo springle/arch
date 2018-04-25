@@ -3,7 +3,6 @@ package com.archerimpact.architect.keystone
 import akka.actor.{ActorRef, Props}
 import com.archerimpact.architect.keystone.shipments.{RawFile, Shipment}
 
-
 object ParserPipe {
   def props(nextPipes: List[ActorRef]): Props = Props(new ParserPipe(nextPipes))
 }

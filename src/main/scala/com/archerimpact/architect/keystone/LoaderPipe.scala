@@ -10,13 +10,13 @@ object LoaderPipe {
 
 class LoaderPipe(nextPipes: List[ActorRef]) extends PipeActor(nextPipes) {
 
-  def urlToRawFile(fileURL: FileURL): RawFile = fileURL match {
-    case `fileURL` if fileURL.url.startsWith("gs://") => GoogleCloudStorage.fileURLtoRawFile(fileURL)
-    case `fileURL` if fileURL.url.startsWith("fake://") => FakeStorage.fileURLtoRawFile(fileURL)
+  def load(fileURL: FileURL): RawFile = fileURL match {
+    case `fileURL` if fileURL.url.startsWith("gs://") => GoogleCloudStorage.fileURLToRawFile(fileURL)
+    case `fileURL` if fileURL.url.startsWith("fake://") => FakeStorage.fileURLToRawFile(fileURL)
   }
 
   override def processShipment(shipment: Shipment): Shipment = shipment match {
-    case fileURL: FileURL => urlToRawFile(fileURL)
+    case fileURL: FileURL => load(fileURL)
   }
 
   override def updateStats(): Unit = context.parent ! KeystoneSupervisor.IncLoaded

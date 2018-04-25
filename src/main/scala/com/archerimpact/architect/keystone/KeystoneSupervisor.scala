@@ -37,7 +37,9 @@ class KeystoneSupervisor extends Actor with ActorLogging {
       s"matched:$matched"
     )
 
-  private val neo4jPipe = context.actorOf(Neo4jPipe.props(List[ActorRef]()), "neo4j-pipe")
+  private val matcherPipe = context.actorOf(MatcherPipe.props(List[ActorRef]()), "matcher-pipe")
+  private val elasticPipe = context.actorOf(ElasticPipe.props(List(matcherPipe)), "elastic-pipe")
+  private val neo4jPipe = context.actorOf(Neo4jPipe.props(List(elasticPipe)), "neo4j-pipe")
   private val parserPipe = context.actorOf(ParserPipe.props(List(neo4jPipe)), "parser-pipe")
   private val loaderPipe = context.actorOf(LoaderPipe.props(List(parserPipe)), "loader-pipe")
   private val archerWorldSourceActor = context.actorOf(RabbitMQ.props(loaderPipe), "archer-world-source")
