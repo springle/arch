@@ -42,10 +42,10 @@ class KeystoneSupervisor extends Actor with ActorLogging {
   private val neo4jPipe = context.actorOf(Neo4jPipe.props(List(elasticPipe)), "neo4j-pipe")
   private val parserPipe = context.actorOf(ParserPipe.props(List(neo4jPipe)), "parser-pipe")
   private val loaderPipe = context.actorOf(LoaderPipe.props(List(parserPipe)), "loader-pipe")
-  private val archerWorldSourceActor = context.actorOf(RabbitMQ.props(loaderPipe), "archer-world-source")
+  private val archerWorldSource = context.actorOf(RabbitMQ.props(loaderPipe), "archer-world-source")
 
   override def receive: PartialFunction[Any, Unit] = {
-    case StartPipeline => archerWorldSourceActor ! SourceActor.StartSending
+    case StartPipeline => archerWorldSource ! SourceActor.StartSending
     case IncReceived => received += 1; logStats()
     case IncLoaded => loaded += 1; logStats()
     case IncParsed => parsed += 1; logStats()
