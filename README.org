@@ -6,7 +6,7 @@ The Keystone Pipeline is a Scala framework for building data
 pipelines. It was built for Archer Architect, and designed to be
 easily extended or modified.
 
-** PipeActor's and SourceActor's
+** Actor Model
 
 Keystone is built using Akka Actors. Most of the actors in its
 hierarchy fall under ones of two categories: =SourceActor='s and
@@ -44,12 +44,12 @@ below:
 
 #+BEGIN_SRC
                   FileURL              RawFile       Graph        Graph          Graph
-                     /\--------------------------------------------------------------------------\
-archerWorldSource -----|--> LoaderPipe -> ParserPipe -> Neo4jPipe -> ElasticPipe -> MatcherPipe   |
-                     \/--------------------------------------------------------------------------/
+                     /\------------------------------------------------------------------------\
+archerWorldSource -----|--> LoaderPipe -> ParserPipe -> Neo4jPipe -> ElasticPipe -> MatcherPipe |
+                     \/------------------------------------------------------------------------/
 #+END_SRC
 
-Vew the source code for each of these components [[file:src/main/scala/com/archerimpact/architect/keystone/][here]].
+Vew the source code for each of these components [[file:src/main/scala/com/archerimpact/architect/keystone/pipes/][here]].
 
 Although the current architecture only includes one =SourceActor= and
 a chain of single-connected =PipeActor='s , much more complex
