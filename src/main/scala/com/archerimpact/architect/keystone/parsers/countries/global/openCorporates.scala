@@ -1,14 +1,14 @@
 package com.archerimpact.architect.keystone.parsers.countries.global
 
 import java.nio.charset.StandardCharsets
+
 import net.liftweb.json.DefaultFormats
 import net.liftweb.json._
-
-import com.archerimpact.architect.keystone.Graph
 import com.archerimpact.architect.keystone.parsers.formats.JSON
+import com.archerimpact.architect.keystone.shipments.GraphShipment
 
 class openCorporates extends JSON {
-  override def parse(data: Array[Byte], url: String): Graph = {
+  override def parse(data: Array[Byte], url: String): GraphShipment = {
 
     var dataStr = new String(data, StandardCharsets.UTF_8)
     print(dataStr)
@@ -19,7 +19,7 @@ class openCorporates extends JSON {
       print(i)
     }
 
-    
-    Graph(List(),List(), url)
+
+    GraphShipment(List(),List(), url)
   }
 }
