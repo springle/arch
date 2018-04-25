@@ -1,10 +1,10 @@
 package com.archerimpact.architect.keystone.sources
 
 import akka.actor.{ActorRef, Props}
-import com.archerimpact.architect.keystone.shipments.FileURL
+import com.archerimpact.architect.keystone.shipments.UrlShipment
 import com.newmotion.akka.rabbitmq._
 
-object RabbitMQ {
+object RMQSource {
   def props(
              target: ActorRef,
              username: String = "architect",
@@ -12,10 +12,10 @@ object RabbitMQ {
              host: String = "localhost",
              port: Int = 5672,
              exchange: String = "sources"
-           ): Props = Props(new RabbitMQ(target, username, password, host, port, exchange))
+           ): Props = Props(new RMQSource(target, username, password, host, port, exchange))
 }
 
-class RabbitMQ(
+class RMQSource(
                 target: ActorRef,
                 val username: String,
                 val password: String,
@@ -44,7 +44,7 @@ class RabbitMQ(
                                   envelope: Envelope,
                                   properties: BasicProperties,
                                   body: Array[Byte]): Unit = {
-        sendShipment(new FileURL(fromBytes(body)))
+        sendShipment(new UrlShipment(fromBytes(body)))
       }
     }
   }

@@ -2,7 +2,7 @@ package com.archerimpact.architect.keystone.shipments
 
 import com.archerimpact.architect.keystone.parsers.Parser
 
-class RawFile(
+class FileShipment(
                val url: String,          // Where did the file come from? (eg. "gs://archer-source-data/usa/ofac/sdn.csv")
                val fileFormat: String,   // What format is the file in? (eg. "csv")
                val data: Array[Byte],    // Put the actual data here.

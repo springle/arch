@@ -1,4 +1,4 @@
-package com.archerimpact.architect.keystone
+package com.archerimpact.architect.keystone.pipes
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import com.archerimpact.architect.keystone.shipments.Shipment

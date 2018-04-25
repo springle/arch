@@ -1,7 +1,8 @@
 package com.archerimpact.architect.keystone
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
-import com.archerimpact.architect.keystone.sources.{RabbitMQ, SourceActor}
+import com.archerimpact.architect.keystone.sources.{RMQSource, SourceActor}
+import com.archerimpact.architect.keystone.pipes._
 
 object KeystoneSupervisor {
   def props: Props = Props(new KeystoneSupervisor)
@@ -37,12 +38,15 @@ class KeystoneSupervisor extends Actor with ActorLogging {
       s"matched:$matched"
     )
 
+  /* Pipe Actors */
   private val matcherPipe = context.actorOf(MatcherPipe.props(List[ActorRef]()), "matcher-pipe")
   private val elasticPipe = context.actorOf(ElasticPipe.props(List(matcherPipe)), "elastic-pipe")
   private val neo4jPipe = context.actorOf(Neo4jPipe.props(List(elasticPipe)), "neo4j-pipe")
   private val parserPipe = context.actorOf(ParserPipe.props(List(neo4jPipe)), "parser-pipe")
   private val loaderPipe = context.actorOf(LoaderPipe.props(List(parserPipe)), "loader-pipe")
-  private val archerWorldSource = context.actorOf(RabbitMQ.props(loaderPipe), "archer-world-source")
+
+  /* Source Actors */
+  private val archerWorldSource = context.actorOf(RMQSource.props(loaderPipe), "archer-world-source")
 
   override def receive: PartialFunction[Any, Unit] = {
     case StartPipeline => archerWorldSource ! SourceActor.StartSending

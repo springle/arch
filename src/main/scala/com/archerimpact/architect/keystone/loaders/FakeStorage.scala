@@ -1,10 +1,10 @@
 package com.archerimpact.architect.keystone.loaders
 
 import com.archerimpact.architect.keystone.parsers.FakeParser
-import com.archerimpact.architect.keystone.shipments.{FileURL, RawFile}
+import com.archerimpact.architect.keystone.shipments.{UrlShipment, FileShipment}
 
 object FakeStorage extends Loader {
-  override def fileURLToRawFile(fileURL: FileURL): RawFile = new RawFile(
+  override def urlToFile(fileURL: UrlShipment): FileShipment = new FileShipment(
     url="fakeURL",
     fileFormat ="fakeFormat",
     data="fakeData".getBytes,

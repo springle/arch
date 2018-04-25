@@ -1,7 +1,8 @@
-package com.archerimpact.architect.keystone
+package com.archerimpact.architect.keystone.pipes
 
 import akka.actor.{ActorRef, Props}
-import com.archerimpact.architect.keystone.shipments.{Graph, Shipment}
+import com.archerimpact.architect.keystone._
+import com.archerimpact.architect.keystone.shipments.{GraphShipment, Shipment}
 import com.sksamuel.elastic4s
 import com.sksamuel.elastic4s.bulk.BulkCompatibleDefinition
 import com.sksamuel.elastic4s.http.ElasticDsl._
@@ -19,15 +20,15 @@ class ElasticPipe(nextPipes: List[ActorRef]) extends PipeActor(nextPipes) {
   val client = HttpClient(elastic4s.ElasticsearchClientUri(host, port.toInt))
   client.execute { createIndex (index) }
 
-  def uploadEntities(graph: Graph): Unit = {
+  def uploadEntities(graph: GraphShipment): Unit = {
     val commands: Seq[BulkCompatibleDefinition] = for (entity <- graph.entities) yield
-      indexInto(s"$index/${getProtoType(entity.proto)}") id getArchitectId(entity, graph) fields
+      indexInto(s"$index/${getProtoType(entity.proto)}") id architectId(entity, graph) fields
         getProtoParams(entity.proto)
     client.execute { bulk(commands) }
   }
 
-  override def processShipment(shipment: Shipment): Shipment = shipment match {
-    case graph: Graph => uploadEntities(graph); graph
+  override def processShipment(shipment: Shipment): GraphShipment = shipment match {
+    case graph: GraphShipment => uploadEntities(graph); graph
   }
 
   override def updateStats(): Unit = context.parent ! KeystoneSupervisor.IncToElastic

@@ -1,7 +1,7 @@
 package com.archerimpact.architect.keystone.sources
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
-import com.archerimpact.architect.keystone.{KeystoneSupervisor, PipeActor}
+import com.archerimpact.architect.keystone.KeystoneSupervisor
 import com.archerimpact.architect.keystone.shipments.Shipment
 import com.archerimpact.architect.keystone.sources.SourceActor.StartSending
 

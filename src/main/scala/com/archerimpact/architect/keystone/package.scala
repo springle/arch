@@ -1,6 +1,6 @@
 package com.archerimpact.architect
 
-import com.archerimpact.architect.keystone.shipments.{Entity, Graph}
+import com.archerimpact.architect.keystone.shipments.{Entity, GraphShipment}
 
 package object keystone {
   def getProtoParams(cc: AnyRef): Map[String, Any] = (Map[String, Any]() /: cc.getClass.getDeclaredFields) {
@@ -9,5 +9,5 @@ package object keystone {
       a + (f.getName -> f.get(cc))
   }
   def getProtoType(cc: AnyRef): String = cc.getClass.getName.split("\\.").last
-  def getArchitectId(entity: Entity, graph: Graph): String = s"${graph.url}/${entity.id}"
+  def architectId(entity: Entity, graph: GraphShipment): String = s"${graph.url}/${entity.id}"
 }
