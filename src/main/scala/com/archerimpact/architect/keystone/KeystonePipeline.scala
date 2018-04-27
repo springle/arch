@@ -15,7 +15,7 @@ class KeystonePipeline extends Pipeline {
 }
 
 object Keystone extends App {
-  LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger].setLevel(Level.INFO)
+  LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger].setLevel(Level.WARN)
   val system = ActorSystem("keystone-pipeline")
   val keystonePipeline = system.actorOf(Props(new KeystonePipeline), "keystone-pipeline")
 }

@@ -1,6 +1,7 @@
 package com.archerimpact.architect
 
-import com.archerimpact.architect.keystone.shipments.{Entity, GraphShipment}
+import com.archerimpact.architect.keystone.loaders.GoogleCloudStorage
+import com.archerimpact.architect.keystone.shipments.{Entity, FileShipment, GraphShipment, UrlShipment}
 
 package object keystone {
   val excludedFields: Set[String] = Set("serialVersionUID")
@@ -11,4 +12,5 @@ package object keystone {
   }.filterNot(_._1.startsWith("_")).filterNot(x => excludedFields.contains(x._1))
   def typeName(x: AnyRef): String = x.getClass.getName.split("\\.").last
   def architectId(entity: Entity, graph: GraphShipment): String = s"${graph.url}/${entity.id}"
+  def loadFromGoogle(url: String): FileShipment = GoogleCloudStorage.urlToFile(new UrlShipment(url))
 }

@@ -3,7 +3,7 @@ package com.archerimpact.architect.keystone.parsers.formats
 import java.io.ByteArrayInputStream
 
 import com.archerimpact.architect.keystone.parsers.Parser
-import com.archerimpact.architect.keystone.shipments.{Entity, GraphShipment}
+import com.archerimpact.architect.keystone.shipments.{Entity, GraphShipment, Link}
 import com.univocity.parsers.csv.{CsvParser, CsvParserSettings}
 
 import scala.collection.JavaConverters._
@@ -11,6 +11,7 @@ import scala.collection.JavaConverters._
 abstract class CSV extends Parser {
 
   def mkEntity(params: String *): Option[Entity]
+  def mkLink(entities: List[Entity], params: String *): Option[Link]
 
   override def parse(data: Array[Byte], url: String): GraphShipment = {
 
@@ -32,7 +33,12 @@ abstract class CSV extends Parser {
       entity <- mkEntity(row: _*)
     } yield entity
 
-    GraphShipment(entities.toList, List(), url)
+    val links = for {
+      row <- parser.parseAll(reader).asScala
+      link <- mkLink(entities.toList, row: _*)
+    } yield link
+
+    GraphShipment(entities.toList, links.toList, url)
   }
 
 }

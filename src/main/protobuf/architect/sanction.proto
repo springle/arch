@@ -9,6 +9,10 @@ option (scalapb.options) = {
     flat_package: true
 };
 
+message Sanction {
+    string name = 1;
+}
+
 message OFACSanction {
     string entNum = 1;
     string sdnName = 2;

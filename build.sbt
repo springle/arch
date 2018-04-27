@@ -14,6 +14,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion,
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+  "org.scala-lang.modules" %% "scala-xml" % "1.1.0",
   "com.newmotion" %% "akka-rabbitmq" % "5.0.0",
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "com.google.cloud" % "google-cloud-storage" % "1.24.1",

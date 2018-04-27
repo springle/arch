@@ -26,7 +26,7 @@ class PipeFitting[InType] (
                           val next: Seq[ActorRef],
                           val context: ActorContext
                           ) {
-  def |:(pipeSpec: PipeSpec): PipeFitting[pipeSpec.InType] = new PipeFitting[pipeSpec.InType](
+  def |:(pipeSpec: PipeSpec) = new PipeFitting[pipeSpec.InType](
     next = List(pipeSpec.instantiate(context, next)),
     context = context
   )

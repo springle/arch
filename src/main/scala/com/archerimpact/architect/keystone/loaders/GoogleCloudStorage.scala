@@ -9,7 +9,7 @@ object GoogleCloudStorage extends Loader {
     val splitURL: Array[String] = fileURL.url.split("/").drop(2)
     new FileShipment(
       url=fileURL.url,
-      fileFormat=fileURL.fileFormat,
+      format=fileURL.fileFormat,
       data=loadData(splitURL),
       country=splitURL(1),
       author=splitURL(2),
