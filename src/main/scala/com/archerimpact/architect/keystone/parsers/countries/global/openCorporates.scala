@@ -19,7 +19,6 @@ class openCorporates extends JSON {
       print(i)
     }
 
-
     GraphShipment(List(),List(), url)
   }
 }

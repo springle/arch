@@ -20,7 +20,9 @@ libraryDependencies ++= Seq(
   "org.neo4j.driver" % "neo4j-java-driver" % "1.4.4",
   "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
   "com.univocity" % "univocity-parsers" % "2.6.3",
-  "net.liftweb" %% "lift-json" % "3.1.0"
+  "net.liftweb" %% "lift-json" % "3.1.0",
+  "com.typesafe.akka" %% "akka-http"   % "10.1.1",
+  "com.typesafe.akka" %% "akka-stream" % "2.5.11"
 )
 
 val elastic4sVersion = "6.2.5"

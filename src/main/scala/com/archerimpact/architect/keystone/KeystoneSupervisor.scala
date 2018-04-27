@@ -3,8 +3,11 @@ package com.archerimpact.architect.keystone
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import ch.qos.logback.classic.{Level, Logger}
 import com.archerimpact.architect.keystone.pipes._
-import com.archerimpact.architect.keystone.sources.{RMQSource, SourceActor}
+import com.archerimpact.architect.keystone.sources.{FakeNewsSource, OCTestingSource, RMQSource, SourceActor, FrontendAPISource}
 import org.slf4j.LoggerFactory
+import akka.http.scaladsl.model.{ ContentTypes, HttpEntity }
+import akka.http.scaladsl.server.HttpApp
+import akka.http.scaladsl.server.Route
 
 object KeystoneSupervisor {
   def props: Props = Props(new KeystoneSupervisor)
@@ -61,10 +64,23 @@ class KeystoneSupervisor extends Actor with ActorLogging {
   }
 }
 
+//object WebServer extends HttpApp {
+//  override def routes: Route =
+//    path("architect") {
+//      get {
+//        //do other stuff
+//        complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>returns data ingest status or some shit</h1>"))
+//      }
+//    }
+//}
+
 object Keystone extends App {
   LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger].setLevel(Level.INFO)
   val system = ActorSystem("keystone-pipeline")
   val keystoneSupervisor = system.actorOf(KeystoneSupervisor.props, "keystone-supervisor")
   keystoneSupervisor ! KeystoneSupervisor.StartPipeline
+
+  FrontendAPISource.startServer("localhost", 8080)
+
 }
 
