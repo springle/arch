@@ -1,14 +1,12 @@
 package com.archerimpact.architect.keystone.sources
 
-import akka.actor.{ActorRef, Props}
+import akka.actor.{ActorContext, ActorRef}
+import com.archerimpact.architect.keystone.SourceSpec
 import com.archerimpact.architect.keystone.shipments.UrlShipment
 
-object FakeNewsSource {
-  def props(target: ActorRef): Props = Props(new FakeNewsSource(target))
-}
-
-class FakeNewsSource(target: ActorRef) extends SourceActor(target) {
-  override def startSending(): Unit =
+class FakeNewsSource(target: ActorRef) extends SourceSpec {
+  override type OutType = UrlShipment
+  override def run(send: OutType => Unit, context: ActorContext): Unit =
      for (_ <- 0 to 10)
-       sendShipment(new UrlShipment("fake://fakeURL"))
+       send(new UrlShipment("fake://fakeURL"))
 }

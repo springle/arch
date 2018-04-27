@@ -1,55 +1,41 @@
 package com.archerimpact.architect.keystone.sources
 
-import akka.actor.{ActorRef, Props}
+import akka.actor.{ActorContext, ActorRef}
+import com.archerimpact.architect.keystone.SourceSpec
 import com.archerimpact.architect.keystone.shipments.UrlShipment
 import com.newmotion.akka.rabbitmq._
 
-object RMQSource {
-  def props(
-             target: ActorRef,
-             username: String = "architect",
-             password: String = "gotpublicdata",
-             host: String = "localhost",
-             port: Int = 5672,
-             exchange: String = "sources"
-           ): Props = Props(new RMQSource(target, username, password, host, port, exchange))
-}
-
 class RMQSource(
-                target: ActorRef,
-                val username: String,
-                val password: String,
-                val host: String,
-                val port: Int,
-                val exchange: String
-              ) extends SourceActor(target) {
+                val username: String = "architect",
+                val password: String = "gotpublicdata",
+                val host: String = "localhost",
+                val port: Int = 5672,
+                val exchange: String = "sources"
+              ) extends SourceSpec {
 
-  override def startSending(): Unit =
-    setupConnection ! CreateChannel(ChannelActor.props(setupSubscriber(target)), Some("subscriber"))
+  private def fromBytes(x: Array[Byte]) = new String(x, "UTF-8")
 
-  def fromBytes(x: Array[Byte]) = new String(x, "UTF-8")
-
-  private def setupSubscriber(target: ActorRef): (Channel, ActorRef) => Any = {
+  private def setupSubscriber(send: OutType => Unit) = {
     (channel: Channel, _: ActorRef) => {
       val queue = channel.queueDeclare().getQueue
       channel.exchangeDeclare(exchange, "fanout")
       channel.queueBind(queue, exchange, "")
-      channel.basicConsume(queue, true, setupConsumer(channel, target))
+      channel.basicConsume(queue, true, setupConsumer(channel, send))
     }
   }
 
-  private def setupConsumer(channel: Channel, target: ActorRef) = {
+  private def setupConsumer(channel: Channel, send: OutType => Unit) = {
     new DefaultConsumer(channel) {
       override def handleDelivery(consumerTag: String,
                                   envelope: Envelope,
                                   properties: BasicProperties,
                                   body: Array[Byte]): Unit = {
-        sendShipment(new UrlShipment(fromBytes(body)))
+        send(new UrlShipment(fromBytes(body)))
       }
     }
   }
 
-  private def setupConnection: ActorRef = {
+  private def setupConnection(context: ActorContext): ActorRef = {
     val factory = new ConnectionFactory()
     factory.setUsername(username)
     factory.setPassword(password)
@@ -58,4 +44,7 @@ class RMQSource(
     context.actorOf(ConnectionActor.props(factory), "rmq-connection")
   }
 
+  override type OutType = UrlShipment
+  override def run(send: OutType => Unit, context: ActorContext): Unit =
+    setupConnection(context) ! CreateChannel(ChannelActor.props(setupSubscriber(send)), Some("subscriber"))
 }

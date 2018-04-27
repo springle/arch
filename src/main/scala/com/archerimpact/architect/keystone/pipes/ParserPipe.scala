@@ -1,19 +1,10 @@
 package com.archerimpact.architect.keystone.pipes
 
-import akka.actor.{ActorRef, Props}
-import com.archerimpact.architect.keystone.KeystoneSupervisor
-import com.archerimpact.architect.keystone.shipments.{FileShipment, GraphShipment, Shipment}
+import com.archerimpact.architect.keystone.PipeSpec
+import com.archerimpact.architect.keystone.shipments.{FileShipment, GraphShipment}
 
-object ParserPipe {
-  def props(nextPipes: List[ActorRef]): Props = Props(new ParserPipe(nextPipes))
-}
-
-class ParserPipe(nextPipes: List[ActorRef]) extends PipeActor(nextPipes) {
-
-  override def processShipment(shipment: Shipment): GraphShipment = shipment match {
-    case rawFile: FileShipment => rawFile.parser.fileToGraph(rawFile)
-  }
-
-  override def updateStats(): Unit = context.parent ! KeystoneSupervisor.IncParsed
-
+class ParserPipe extends PipeSpec {
+  override type InType = FileShipment
+  override type OutType = GraphShipment
+  override def flow(input: FileShipment): GraphShipment = input.parser.fileToGraph(input)
 }
