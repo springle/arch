@@ -16,14 +16,14 @@ class Neo4jPipe extends PipeSpec {
   def uploadLinks(graph: GraphShipment): Unit =
     for (link <- graph.links) neo4jSession.run(
       s"MATCH " +
-        s"(subj:${typeName(link.subj.proto)} {architectId:'${architectId(link.subj, graph)}'}), " +
-        s"(obj:${typeName(link.obj.proto)} {architectId:'${architectId(link.obj, graph)}'})\n" +
+        s"(subj:${typeName(link.subj.proto)} {architectId:'${link.subj.id}'}), " +
+        s"(obj:${typeName(link.obj.proto)} {architectId:'${link.obj.id}'})\n" +
         s"CREATE (subj)-[:${link.predicate}]->(obj)"
     )
 
   def uploadEntities(graph: GraphShipment): Unit =
     for (entity <- graph.entities) neo4jSession.run(
-        s"CREATE (entity:${typeName(entity.proto)} {" + s"architectId:'${architectId(entity, graph)}'," +
+        s"CREATE (entity:${typeName(entity.proto)} {" + s"architectId:'${entity.id}'," +
           protoParams(entity.proto).map { case (k, v) => k + s":'${clean(v)}'" }.mkString(",") + "})"
     )
 
