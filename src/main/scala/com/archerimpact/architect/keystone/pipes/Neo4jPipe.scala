@@ -14,18 +14,22 @@ class Neo4jPipe extends PipeSpec {
   def clean(s: Any): String = s.toString.replace("'", "")
 
   def uploadLinks(graph: GraphShipment): Unit =
-    for (link <- graph.links)
-
+    graph.links.
+      map(link => s"MATCH (subject),(object) " +
+        s"WHERE subject.architectId = '${link.subjId}' " +
+        s"AND object.architectId = '${link.objId}' " +
+        s"MERGE (subject)-[:${link.predicate}]->(object)").
+      foreach(script => neo4jSession.run(script))
 
   def uploadEntities(graph: GraphShipment): Unit =
-    neo4jSession.run(
-      graph.entities.
-        map(entity => s"CREATE (entity:${typeName(entity.proto)} {" + s"architectId:'${entity.id}'})").
-        mkString("\n")
-    )
+    graph.entities.
+      map(entity => s"MERGE (entity:${typeName(entity.proto)} {" + s"architectId:'${entity.id}'})").
+      foreach(script => neo4jSession.run(script))
 
   override def flow(input: GraphShipment): GraphShipment = {
-    uploadEntities(input); uploadLinks(input); input
+    uploadEntities(input); println("uploaded entities")
+    uploadLinks(input); println("uploaded links")
+    input
   }
 
 }

@@ -16,7 +16,7 @@ class ElasticPipe extends PipeSpec {
 
   def uploadEntities(graph: GraphShipment): Unit = {
     val commands: Seq[BulkCompatibleDefinition] = for (entity <- graph.entities) yield
-      indexInto(s"$index/${typeName(entity.proto)}") id architectId(entity, graph) fields
+      indexInto(s"$index/${typeName(entity.proto)}") id entity.id fields
         protoParams(entity.proto)
     elasticClient.execute { bulk(commands) }
   }

@@ -1,22 +1,27 @@
 package com.archerimpact.architect.keystone.shipments
 
-import scalapb.Message
-import scalapb.lenses.Updatable
-
-/* Graph */
+import com.archerimpact.architect.ontology.source
 
 object GraphShipment {
+
+  /* Add source entity and enforce global uniqueness */
+  def updateEntities(entities: List[Entity], url: String): List[Entity] =
+    Entity(url, source(
+      url = url,
+      author = "archer",
+      investigation = "architect"
+    )) :: entities.map(entity => entity.copy(id = s"$url/${entity.id}"))
+
+  /* Add links to source entity and enforce global uniqueness */
+  def updateLinks(entities: List[Entity], links: List[Link], url: String): List[Link] = {
+    val updatedLinks = links.map(link => link.copy(subjId = s"$url/${link.subjId}", objId = s"$url/${link.objId}"))
+    updatedLinks ::: entities.map(entity => Link(s"$url/${entity.id}", "APPEARS_ON", url))
+  }
+
   def apply(entities: List[Entity], links: List[Link], url: String): GraphShipment =
-    new GraphShipment(entities.map(e => e.copy(id=s"$url/${e.id}")),
-      links.map(l => l.copy(subjId = s"$url/${l.subjId}", objId = s"$url/${l.objId}")), url)
+    new GraphShipment(updateEntities(entities, url), updateLinks(entities, links, url), url)
 }
 
 case class GraphShipment(entities: List[Entity], links: List[Link], url: String) extends Shipment
-
-/* Entities */
-
-case class Entity(id: String, proto: scalapb.GeneratedMessage with Message[T] with Updatable[T] forSome {type T} )
-
-/* Links */
-
+case class Entity(id: String, proto: scalapb.GeneratedMessage)
 case class Link(subjId: String, predicate: String, objId: String)
