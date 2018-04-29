@@ -10,6 +10,9 @@ option (scalapb.options) = {
 };
 
 message identifyingDocument {
-    uint64 number = 1;
-    string type = 2;
+    string number = 1;
+    string numberType = 2;
+    string issuedBy = 3;
+    string issuedIn = 4;
+    bool valid = 5;
 }

@@ -11,20 +11,29 @@ case class PartialGraph(entities: List[Entity] = List[Entity](), links: List[Lin
 
 class ofac extends JSONParser {
 
-  def getDocumentEntities(documents: JValue): List[identifyingDocument] = documents match {
-    case JNull => List[identifyingDocument]()
-    case _ => ???
+  def getName(jv: JValue): String = compact(render(jv \ "identity" \ "primary" \ "display_name"))
+  def getIdentifyingDocuments(jv: JValue): List[identifyingDocument] = jv match {
+    case JArray(List()) => List[identifyingDocument]()
+    case JArray(documents) =>
+      documents.children.map(document => identifyingDocument(
+        number = compact(render(document \ "id_number")),
+        numberType = compact(render(document \ "type")),
+        issuedBy = compact(render(document \ "issued_by")),
+        issuedIn = compact(render(document \ "issued_in")),
+        valid = document \ "validity" == JString("Valid")
+      ))
+  }
+  def getLinks(jv: JValue): List[Link] = {
+
   }
 
   def individualToGraph(id: BigInt, listing: JValue): PartialGraph = PartialGraph()
   def vesselToGraph(id: BigInt, listing: JValue): PartialGraph = PartialGraph()
   def aircraftToGraph(id: BigInt, listing: JValue): PartialGraph =  PartialGraph()
   def organizationToGraph(id: BigInt, listing: JValue): PartialGraph = {
-    var links = List[Link]()
-    val name: String = compact(render(listing \ "identity" \ "primary" \ "display_name"))
-    val documents: List[identifyingDocument] = getDocumentEntities(listing \ "documents")
-
-
+    val name: String = getName(listing)
+    val documents: Seq[identifyingDocument] = getIdentifyingDocuments(listing \ "documents")
+    val links: List[Link]() = getLinks(listing \ "linked_profiles")
 
 
     PartialGraph()
