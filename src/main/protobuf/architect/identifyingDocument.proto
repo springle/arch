@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package architect;
+
+import "scalapb/scalapb.proto";
+
+option (scalapb.options) = {
+    package_name: "com.archerimpact.architect.ontology"
+    flat_package: true
+};
+
+message identifyingDocument {
+    uint64 number = 1;
+    string type = 2;
+}

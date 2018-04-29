@@ -8,7 +8,7 @@ import com.univocity.parsers.csv.{CsvParser, CsvParserSettings}
 
 import scala.collection.JavaConverters._
 
-abstract class CSV extends Parser {
+abstract class CSVParser extends Parser {
 
   def mkEntity(params: String *): Option[Entity]
   def mkLink(entities: List[Entity], params: String *): Option[Link]

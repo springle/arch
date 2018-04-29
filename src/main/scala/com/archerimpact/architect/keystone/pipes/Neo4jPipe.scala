@@ -13,13 +13,7 @@ class Neo4jPipe extends PipeSpec {
 
   def clean(s: Any): String = s.toString.replace("'", "")
 
-  def uploadLinks(graph: GraphShipment): Unit =
-    for (link <- graph.links) neo4jSession.run(
-      s"MATCH " +
-        s"(subj:${typeName(link.subj.proto)} {architectId:'${link.subj.id}'}), " +
-        s"(obj:${typeName(link.obj.proto)} {architectId:'${link.obj.id}'})\n" +
-        s"CREATE (subj)-[:${link.predicate}]->(obj)"
-    )
+  def uploadLinks(graph: GraphShipment): Unit = None
 
   def uploadEntities(graph: GraphShipment): Unit =
     for (entity <- graph.entities) neo4jSession.run(

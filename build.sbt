@@ -19,6 +19,7 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "com.google.cloud" % "google-cloud-storage" % "1.24.1",
   "org.neo4j.driver" % "neo4j-java-driver" % "1.4.4",
+  "org.json4s" %% "json4s-native" % "3.5.3",
   "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
   "com.univocity" % "univocity-parsers" % "2.6.3"
 )
