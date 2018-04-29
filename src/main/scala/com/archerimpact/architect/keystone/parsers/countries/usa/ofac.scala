@@ -2,7 +2,7 @@ package com.archerimpact.architect.keystone.parsers.countries.usa
 
 import com.archerimpact.architect.keystone.parsers.formats.JSONParser
 import com.archerimpact.architect.keystone.shipments.{Entity, GraphShipment, Link}
-import com.archerimpact.architect.ontology.identifyingDocument
+import com.archerimpact.architect.ontology.{identifyingDocument, organization}
 import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.native.JsonMethods._
@@ -12,6 +12,7 @@ case class PartialGraph(entities: List[Entity] = List[Entity](), links: List[Lin
 class ofac extends JSONParser {
 
   def getName(jv: JValue): String = compact(render(jv \ "identity" \ "primary" \ "display_name"))
+
   def getIdentifyingDocuments(jv: JValue): List[identifyingDocument] = jv match {
     case JArray(List()) => List[identifyingDocument]()
     case JArray(documents) =>
@@ -23,20 +24,27 @@ class ofac extends JSONParser {
         valid = document \ "validity" == JString("Valid")
       ))
   }
-  def getLinks(jv: JValue): List[Link] = {
 
+  def getLinks(id: BigInt, jv: JValue): List[Link] = jv match {
+    case JArray(List()) => List[Link]()
+    case JArray(links) =>
+      links.children.map(link => Link(
+        subjId = id.toString,
+        predicate = compact(render(link \ "relation_type")),
+        objId = compact(render(link \ "linked_id")).toString
+      ))
   }
 
   def individualToGraph(id: BigInt, listing: JValue): PartialGraph = PartialGraph()
   def vesselToGraph(id: BigInt, listing: JValue): PartialGraph = PartialGraph()
   def aircraftToGraph(id: BigInt, listing: JValue): PartialGraph =  PartialGraph()
+
   def organizationToGraph(id: BigInt, listing: JValue): PartialGraph = {
-    val name: String = getName(listing)
-    val documents: Seq[identifyingDocument] = getIdentifyingDocuments(listing \ "documents")
-    val links: List[Link]() = getLinks(listing \ "linked_profiles")
-
-
-    PartialGraph()
+    val entity = Entity(id.toString, organization(
+      name = getName(listing),
+      documents = getIdentifyingDocuments(listing \ "documents")
+    ))
+    PartialGraph(List(entity), getLinks(id, listing \ "linked_profiles"))
   }
 
 
@@ -51,7 +59,9 @@ class ofac extends JSONParser {
       case "Vessel" => vesselToGraph(id, listing)
       case "Aircraft" => aircraftToGraph(id, listing)
     }).foldLeft(PartialGraph())(merge)
-    GraphShipment(partialGraph.entities, partialGraph.links, url)
+    val graph = GraphShipment(partialGraph.entities, partialGraph.links, url)
+    println(graph)
+    graph
   }
   def merge(a: PartialGraph, b: PartialGraph): PartialGraph =
     a.copy(entities = a.entities ::: b.entities, links = a.links ::: b.links)

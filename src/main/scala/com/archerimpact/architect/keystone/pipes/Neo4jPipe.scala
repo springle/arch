@@ -13,12 +13,15 @@ class Neo4jPipe extends PipeSpec {
 
   def clean(s: Any): String = s.toString.replace("'", "")
 
-  def uploadLinks(graph: GraphShipment): Unit = None
+  def uploadLinks(graph: GraphShipment): Unit =
+    for (link <- graph.links)
+
 
   def uploadEntities(graph: GraphShipment): Unit =
-    for (entity <- graph.entities) neo4jSession.run(
-        s"CREATE (entity:${typeName(entity.proto)} {" + s"architectId:'${entity.id}'," +
-          protoParams(entity.proto).map { case (k, v) => k + s":'${clean(v)}'" }.mkString(",") + "})"
+    neo4jSession.run(
+      graph.entities.
+        map(entity => s"CREATE (entity:${typeName(entity.proto)} {" + s"architectId:'${entity.id}'})").
+        mkString("\n")
     )
 
   override def flow(input: GraphShipment): GraphShipment = {
