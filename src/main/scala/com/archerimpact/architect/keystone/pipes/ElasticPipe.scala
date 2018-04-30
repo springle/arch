@@ -4,6 +4,7 @@ import com.archerimpact.architect.keystone._
 import com.archerimpact.architect.keystone.shipments.GraphShipment
 import com.sksamuel.elastic4s.bulk.BulkCompatibleDefinition
 import com.sksamuel.elastic4s.http.ElasticDsl._
+import scalapb.json4s.JsonFormat
 
 class ElasticPipe extends PipeSpec {
 
@@ -16,8 +17,7 @@ class ElasticPipe extends PipeSpec {
 
   def uploadEntities(graph: GraphShipment): Unit = {
     val commands: Seq[BulkCompatibleDefinition] = for (entity <- graph.entities) yield
-      indexInto(s"$index/${typeName(entity.proto)}") id entity.id fields
-        protoParams(entity.proto)
+      indexInto(s"$index/${typeName(entity.proto)}") id entity.id doc JsonFormat.toJsonString(entity.proto)
     elasticClient.execute { bulk(commands) }
   }
 

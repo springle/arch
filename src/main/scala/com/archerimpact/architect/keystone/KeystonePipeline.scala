@@ -8,8 +8,8 @@ import org.slf4j.LoggerFactory
 
 class KeystonePipeline extends Pipeline {
   override def build(): Unit = {
-    new RMQSource() ->: (new LoaderPipe |: new ParserPipe |:
-      new Neo4jPipe |: new ElasticPipe |: new MatcherPipe \: this)
+    new RMQSource() ->: (new LoaderPipe |: new ParserPipe |: new Neo4jPipe
+      |: new ElasticPipe |: new MatcherPipe \: this)
   }
 }
 
