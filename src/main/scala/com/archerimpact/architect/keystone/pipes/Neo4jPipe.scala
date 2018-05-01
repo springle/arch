@@ -1,53 +1,58 @@
 package com.archerimpact.architect.keystone.pipes
 
+import java.util.{HashMap => JMap}
+
 import com.archerimpact.architect.keystone._
 import com.archerimpact.architect.keystone.shipments.GraphShipment
-import org.neo4j.driver.v1.{Session, Statement, Transaction}
+import org.neo4j.driver.v1.Session
+
 import scala.collection.JavaConverters._
-import java.util.{HashMap=>JMap}
 
 class Neo4jPipe extends PipeSpec {
 
   override type InType = GraphShipment
   override type OutType = GraphShipment
 
-  private val GROUP_SIZE = 10000
-
   def clean(s: Any): String = s.toString.replace("'", "").replace(".","")
 
   def uploadLinks(graph: GraphShipment, neo4jSession: Session): Unit =
-    for (group <- graph.links.grouped(GROUP_SIZE)) {
-      val tx: Transaction = neo4jSession.beginTransaction()
-      tx.run(
-        group.
-          map(link => s"MATCH (`${link.subjId}`),(`${link.objId}`) " +
-            s"WHERE `${link.subjId}`.architectId = '${link.subjId}' " +
-            s"AND `${link.objId}`.architectId = '${link.objId}' " +
-            s"MERGE (`${link.subjId}`)-[:${link.predicate}]->(`${link.objId}`) ").
-          mkString("\n")
-      )
-      tx.success()
-      tx.close()
+    for (group <- graph.links.groupBy(link => link.predicate)) {
+      val (groupPredicate, groupLinks) = group
+      val links = groupLinks.map(link => new JMap[String, AnyRef]() {
+        put("subjId", link.subjId)
+        put("objId", link.objId)
+      }).asJava
+      val parameters: JMap[String, AnyRef] = new JMap[String, AnyRef]() {
+        put("links", links)
+      }
+      val statement =
+        s"""
+            WITH {links} AS links
+            UNWIND links AS link
+            MATCH (subject), (object)
+            WHERE subject.architectId = link.subjId
+            AND object.architectId = link.objId
+            MERGE (subject)-[:$groupPredicate]->(object)
+         """.stripMargin
+      neo4jSession.run(statement, parameters)
     }
 
   def uploadEntities(graph: GraphShipment, neo4jSession: Session): Unit =
-    for (group <- graph.entities.grouped(GROUP_SIZE)) {
+    for (group <- graph.entities.groupBy(entity => typeName(entity.proto))) {
+      val (groupType, groupEntities) = group
+      val entitiesMap = groupEntities.map(entity => new JMap[String, AnyRef](){
+        put("id", entity.id)
+        put("display", clean(entity.proto.getFieldByNumber(1)))
+      }).asJava
+      val parameters: JMap[String, AnyRef] = new JMap[String, AnyRef](){
+        put("entities", entitiesMap)
+      }
       val statement =
         s"""
             WITH {entities} AS entities
             UNWIND entities AS entity
-            MERGE (e:`entity.typeOf` {architectId: entity.id, display: entity.display})
+            MERGE (e:$groupType {architectId: entity.id, display: entity.display})
          """.stripMargin
-      val parameters: JMap[String, AnyRef] = new JMap[String, AnyRef]()
-      parameters.put("entities",
-        group.map(entity =>
-          Map(
-            "typeOf" -> typeName(entity),
-            "id" -> entity.id,
-            "display" -> clean(entity.proto.getFieldByNumber(1))
-          ).asJava
-        ).asJava
-      )
       neo4jSession.run(statement, parameters)
     }
 
