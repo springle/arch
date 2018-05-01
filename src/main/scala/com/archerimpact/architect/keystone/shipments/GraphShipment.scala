@@ -1,8 +1,22 @@
 package com.archerimpact.architect.keystone.shipments
 
 import com.archerimpact.architect.ontology.source
+import scalapb.descriptors.PMessage
 
 object GraphShipment {
+
+  // TODO: implement
+  def flattenEntity(entity: Entity, url: String): Unit = {
+    for (field <- entity.proto.companion.scalaDescriptor.fields)
+      entity.proto.getField(field) match {
+        case PMessage(x) => None
+      }
+  }
+
+  /* Split nested entities into multiple linked entities */
+  def generateGraph(entities: List[Entity], links: List[Link], url: String): GraphShipment = {
+    GraphShipment(entities, links, url)
+  }
 
   /* Add source entity and enforce global uniqueness */
   def updateEntities(entities: List[Entity], url: String): List[Entity] =

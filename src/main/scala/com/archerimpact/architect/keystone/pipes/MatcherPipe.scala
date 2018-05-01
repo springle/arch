@@ -16,14 +16,13 @@ class MatcherPipe extends PipeSpec {
   def matchGraph(graph: GraphShipment): Unit =
     for {
       entity <- graph.entities
-      subjectId = architectId(entity, graph)
       (fieldName, fieldValue) <- protoParams(entity.proto)
       response <- elasticClient.execute(
         search(s"$index/${typeName(entity.proto)}") query termQuery(fieldName, fieldValue.toString)
       ).await
       result <- response
-      hit <- result.hits.hits if hit.id != subjectId
-    } println(s"$subjectId <-- same $fieldName --> ${hit.id}")
+      hit <- result.hits.hits if hit.id != entity.id
+    } println(s"${entity.id} <-- same $fieldName --> ${hit.id}")
 
   override def flow(input: GraphShipment): GraphShipment = {
     matchGraph(input); input

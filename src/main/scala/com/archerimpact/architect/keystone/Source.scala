@@ -25,6 +25,6 @@ abstract class SourceSpec {
   type OutType
   def run(send: OutType => Unit, context: ActorContext): Unit
   def props(next: Seq[ActorRef]): Props = Props(new Source[OutType](next, run))
-  def instantiate(context: ActorContext, next: Seq[ActorRef]): ActorRef = context.actorOf(props(next), typeName(this))
+  def instantiate(context: ActorContext, next: Seq[ActorRef]): ActorRef = context.actorOf(props(next))
 }
 

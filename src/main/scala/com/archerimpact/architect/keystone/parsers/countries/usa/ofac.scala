@@ -31,11 +31,18 @@ class ofac extends JSONParser {
   def getLinks(id: String, jv: JValue): List[Link] = jv match {
     case JArray(List()) => List[Link]()
     case JArray(links) =>
-      links.children.map(link => Link(
-        subjId = id,
-        predicate = convertPredicate(compact(render(link \ "relation_type"))),
-        objId = compact(render(link \ "linked_id"))
-      ))
+      links.
+        children.
+        map(link => compact(render(link \ "is_reverse")) match {
+          case "false" => Link(
+            subjId = id,
+            predicate = convertPredicate(compact(render(link \ "relation_type"))),
+            objId = compact(render(link \ "linked_id")))
+          case "true" => Link(
+            subjId = compact(render(link \ "linked_id")),
+            predicate = convertPredicate(compact(render(link \ "relation_type"))),
+            objId = id)
+      })
   }
 
   /* Utility function to transform predicate names */
