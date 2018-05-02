@@ -9,6 +9,6 @@ package object keystone {
       f.setAccessible(true)
       a + (f.getName -> f.get(proto))
   }.filterNot(_._1.startsWith("_")).filterNot(x => excludedFields.contains(x._1))
-  def protoType(proto: AnyRef): String = proto.getClass.getName.split("\\.").last
+  def typeName(x: AnyRef): String = x.getClass.getName.split("\\.").last
   def architectId(entity: Entity, graph: GraphShipment): String = s"${graph.url}/${entity.id}"
 }

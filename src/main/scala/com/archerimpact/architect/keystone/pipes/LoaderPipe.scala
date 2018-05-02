@@ -1,24 +1,18 @@
 package com.archerimpact.architect.keystone.pipes
 
-import akka.actor.{ActorRef, Props}
-import com.archerimpact.architect.keystone.KeystoneSupervisor
+import com.archerimpact.architect.keystone.PipeSpec
 import com.archerimpact.architect.keystone.loaders.{FakeStorage, GoogleCloudStorage}
-import com.archerimpact.architect.keystone.shipments.{UrlShipment, FileShipment, Shipment}
+import com.archerimpact.architect.keystone.shipments.{FileShipment, UrlShipment}
 
-object LoaderPipe {
-  def props(nextPipes: List[ActorRef]): Props = Props(new LoaderPipe(nextPipes))
-}
+class LoaderPipe extends PipeSpec {
 
-class LoaderPipe(nextPipes: List[ActorRef]) extends PipeActor(nextPipes) {
+  override type InType = UrlShipment
+  override type OutType = FileShipment
 
   def load(fileURL: UrlShipment): FileShipment = fileURL match {
     case `fileURL` if fileURL.url.startsWith("gs://") => GoogleCloudStorage.urlToFile(fileURL)
     case `fileURL` if fileURL.url.startsWith("fake://") => FakeStorage.urlToFile(fileURL)
   }
 
-  override def processShipment(shipment: Shipment): FileShipment = shipment match {
-    case fileURL: UrlShipment => load(fileURL)
-  }
-
-  override def updateStats(): Unit = context.parent ! KeystoneSupervisor.IncLoaded
+  override def flow(input: UrlShipment): FileShipment = load(input)
 }
