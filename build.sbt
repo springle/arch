@@ -11,6 +11,8 @@ PB.targets in Compile := Seq(
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion,
+  "com.typesafe.akka" %% "akka-http"   % "10.1.1",
+  "com.typesafe.akka" %% "akka-stream" % "2.5.11",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
   "org.scala-lang.modules" %% "scala-xml" % "1.1.0",
   "com.google.cloud" % "google-cloud-storage" % "1.24.1",         // GCS

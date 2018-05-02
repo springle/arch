@@ -39,5 +39,7 @@ object Arch extends App {
   LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger].setLevel(Level.WARN)
   val system = ActorSystem("arch")
   val archPipeline = system.actorOf(Props(new ArchPipeline), "pipeline")
+
+  APISource.startServer("localhost", 8080, system)
 }
 
