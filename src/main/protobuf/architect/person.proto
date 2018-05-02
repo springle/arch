@@ -12,5 +12,4 @@ option (scalapb.options) = {
 
 message person {
     string name = 1;
-    repeated identifyingDocument identifyingDocuments = 2;
 }

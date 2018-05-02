@@ -3,7 +3,6 @@ syntax = "proto3";
 package architect;
 
 import "scalapb/scalapb.proto";
-import "architect/identifyingDocument.proto";
 
 option (scalapb.options) = {
     package_name: "com.archerimpact.architect.ontology"
@@ -11,6 +10,5 @@ option (scalapb.options) = {
 };
 
 message organization {
-    string name = 1;
-    repeated identifyingDocument identifyingDocuments = 2;
+    string name_ = 1;
 }
