@@ -61,24 +61,29 @@ class ofac extends JSONParser {
     /* Extract fields */
     val id = compact(render(listing \ "fixed_ref"))
     val name = getName(listing)
-    val identifyingDocuments = getIdentifyingDocuments(listing \ "documents")
     val subtype = listing \ "party_sub_type"
+
+    /* Extract ID documents */
+    val idDocs: List[Entity] = getIdentifyingDocuments(listing \ "documents").
+      map(idDoc => Entity(idDoc.number, idDoc)).toList
+    val idDocLinks: List[Link] = idDocs.
+      map(idDoc => Link(id, "HAS_ID_DOC", idDoc.id)).toList
 
     /* Determine entity type */
     val proto = subtype match {
       case JString("Entity") =>
-        organization(name, identifyingDocuments)
+        organization(name)
       case JString("Individual") =>
-        person(name, identifyingDocuments)
+        person(name)
       case JString("Vessel") =>
-        vessel(name, identifyingDocuments)
+        vessel(name)
       case JString("Aircraft") =>
-        aircraft(name, identifyingDocuments)
+        aircraft(name)
     }
 
     /* Generate partial graph */
-    val `entities` = List(Entity(id, proto))
-    val `links` = getLinks(id, listing \ "linked_profiles")
+    val `entities` = Entity(id, proto) :: idDocs
+    val `links` = getLinks(id, listing \ "linked_profiles") ::: idDocLinks
     PartialGraph(`entities`, `links`)
   }
 

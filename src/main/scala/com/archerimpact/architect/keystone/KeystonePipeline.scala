@@ -7,10 +7,14 @@ import com.archerimpact.architect.keystone.sources.RMQSource
 import org.slf4j.LoggerFactory
 
 class KeystonePipeline extends Pipeline {
-  override def build(): Unit = {
-    new RMQSource() ->: (new LoaderPipe |: new ParserPipe |: new Neo4jPipe
-      |: new ElasticPipe |: new MatcherPipe \: this)
-  }
+  override def build(): Unit = new RMQSource() ->:(
+    new LoaderPipe
+      |: new ParserPipe
+      |: new ElasticPipe
+      |: new Neo4jPipe
+      |: new MatcherPipe
+      \: this
+    )
 }
 
 object Keystone extends App {

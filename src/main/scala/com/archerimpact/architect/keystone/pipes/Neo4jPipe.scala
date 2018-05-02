@@ -4,7 +4,7 @@ import java.util.{HashMap => JMap}
 
 import com.archerimpact.architect.keystone._
 import com.archerimpact.architect.keystone.shipments.GraphShipment
-import org.neo4j.driver.v1.Session
+import org.neo4j.driver.v1.{Session, Transaction}
 
 import scala.collection.JavaConverters._
 
@@ -15,28 +15,25 @@ class Neo4jPipe extends PipeSpec {
 
   def clean(s: Any): String = s.toString.replace("'", "").replace(".","")
 
-  def uploadLinks(graph: GraphShipment, neo4jSession: Session): Unit =
-    for (group <- graph.links.groupBy(link => link.predicate)) {
-      val (groupPredicate, groupLinks) = group
-      val links = groupLinks.map(link => new JMap[String, AnyRef]() {
-        put("subjId", link.subjId)
-        put("objId", link.objId)
-      }).asJava
-      val parameters: JMap[String, AnyRef] = new JMap[String, AnyRef]() {
-        put("links", links)
-      }
-      val statement =
-        s"""
-            WITH {links} AS links
-            UNWIND links AS link
-            MATCH (subject), (object)
-            WHERE subject.architectId = link.subjId
-            AND object.architectId = link.objId
-            MERGE (subject)-[:$groupPredicate]->(object)
-         """.stripMargin
-      neo4jSession.run(statement, parameters)
-    }
+  /* Upload links to neo4j, grouped by predicate type */
+  def uploadLinks(graph: GraphShipment, neo4jSession: Session): Unit = {
+    val idToType: Map[String, String] = graph.entities.map(entity => (entity.id, typeName(entity.proto))).toMap
+    val tx: Transaction = neo4jSession.beginTransaction()
+    for (link <- graph.links) tx.run(
+      s"""
+        MATCH (subject:${idToType(link.subjId)})
+        WHERE subject.architectId = '${link.subjId}'
+        WITH subject
+        MATCH (object:${idToType(link.objId)})
+        WHERE object.architectId = '${link.objId}'
+        MERGE (subject)-[:${link.predicate}]->(object)
+      """.stripMargin
+    )
+    tx.success()
+    tx.close()
+  }
 
+  /* Upload entities to neo4j, grouped by proto type */
   def uploadEntities(graph: GraphShipment, neo4jSession: Session): Unit =
     for (group <- graph.entities.groupBy(entity => typeName(entity.proto))) {
       val (groupType, groupEntities) = group
@@ -56,6 +53,7 @@ class Neo4jPipe extends PipeSpec {
       neo4jSession.run(statement, parameters)
     }
 
+  /* Create indices in neo4j for each proto type on archerId */
   def createIndices(graph: GraphShipment, neo4jSession: Session): Unit =
     for (entityType <- graph.entities.map(entity => typeName(entity)).toSet[String])
       neo4jSession.run(
@@ -64,8 +62,8 @@ class Neo4jPipe extends PipeSpec {
 
   override def flow(input: GraphShipment): GraphShipment = {
     val neo4jSession = newNeo4jSession()
-    createIndices(input, neo4jSession); println("created indices")
     uploadEntities(input, neo4jSession); println("uploaded entities")
+    createIndices(input, neo4jSession); println("created indices")
     uploadLinks(input, neo4jSession); println("uploaded links")
     neo4jSession.close()
     input
