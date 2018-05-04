@@ -5,13 +5,15 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.{HttpApp, Route}
 import com.archerimpact.architect.arch.pipes._
 import com.archerimpact.architect.arch.shipments.UrlShipment
-import com.sksamuel.elastic4s.http.ElasticDsl.{search, termQuery}
+import com.sksamuel.elastic4s.http.{ElasticDsl, RequestFailure}
+import com.sksamuel.elastic4s.http.ElasticDsl._
 import org.neo4j.driver.v1.Value
 
 import scala.collection.JavaConverters._
 import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.native.JsonMethods._
+import org.json4s.JValue
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -26,7 +28,7 @@ object APISource extends HttpApp {
       path(Segment) { architect_id =>
         get {
           val refined_id = architect_id.replaceAll("_", "/")
-          print(refined_id)
+          println(refined_id)
           val node = getFullGraph(refined_id)
           complete(HttpEntity(ContentTypes.`application/json`, "" + node))
         }
@@ -86,10 +88,15 @@ object APISource extends HttpApp {
 
     }
 
-    var architect_id_list = idMap.values.toList
+//    var architect_id_list = idMap.values.toList
+//    for (arch_id <- architect_id_list) {
+//      println(getNodeInfo(arch_id))
+//    }
+
+    print(getNodeInfo("gs://archer-source-data/usa/ofac/sdn.json/10575"))
 
     val relStr = compact(render(relationshipTuples))
-    val nodeStr = compact(render(architect_id_list))
+    val nodeStr = compact(render(idMap))
     s"""{"nodes": $nodeStr, "relationships": $relStr}"""
 
   }
@@ -97,8 +104,18 @@ object APISource extends HttpApp {
   def getNodeInfo(architect_id: String): String = {
     val elasticClient = newElasticClient()
 
-    //val resp = elasticClient.execute(search(s"$index/${typeName(entity.proto)}") query termQuery(fieldName, fieldValue.toString))
-    return ""
+    println(architect_id)
+
+    val resp = elasticClient.execute{
+      search(s"entities*") query idsQuery(architect_id)
+    }.await
+
+    resp match {
+      case Left(failure) => "We failed " + failure.error
+      case Right(results) => compact(render(results.result.hits.hits(0).sourceAsString))
+    }
+
+
   }
 
 }
