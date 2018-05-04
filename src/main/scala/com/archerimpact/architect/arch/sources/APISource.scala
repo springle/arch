@@ -25,7 +25,9 @@ object APISource extends HttpApp {
     pathPrefix("graph") {
       path(Segment) { architect_id =>
         get {
-          val node = getFullGraph(architect_id)
+          val refined_id = architect_id.replaceAll("_", "/")
+          print(refined_id)
+          val node = getFullGraph(refined_id)
           complete(HttpEntity(ContentTypes.`application/json`, "" + node))
         }
       }
@@ -49,16 +51,15 @@ object APISource extends HttpApp {
     val neo4jSession = newNeo4jSession()
 
     //query neo4j for all nodes connected to start node with architect_id
-    //TODO: change id to architect id
     var fullQuery =
-      s"""MATCH path=(g)-[r*0..5]-(p) WHERE id(g)=$architect_id UNWIND r as rel UNWIND nodes(path) as n RETURN COLLECT(distinct rel) AS collected, COLLECT(distinct n) as nodes, g""".stripMargin
+      s"""MATCH path=(g)-[r*0..5]-(p) WHERE g.architectId='$architect_id' UNWIND r as rel UNWIND nodes(path) as n RETURN COLLECT(distinct rel) AS collected, COLLECT(distinct n) as nodes, g""".stripMargin
 
     var resp = neo4jSession.run(fullQuery)
 
     //extract info from neo4j records response
     var hN = resp.hasNext
-    var relationshipTuples = new ListBuffer[List[String]]()
 
+    var relationshipTuples = new ListBuffer[List[String]]()
     var idMap = mutable.Map[String, String]()
 
     if (hN) {
@@ -73,19 +74,23 @@ object APISource extends HttpApp {
 
       for (i <- 0 to numNodes-1) {
         var node = nodes.get(i).asNode()
-        idMap.+=(node.id().toString -> node.get("architect_id").toString)
+        idMap.+=(node.id().toString -> node.get("architectId").toString)
       }
 
       for (i <- 0 to relSize-1) {
         var relation = rels.get(i).asRelationship()
-        relationshipTuples.+=(List(relation.startNodeId().toString, relation.`type`(), relation.endNodeId().toString))
+        val start = idMap.get(relation.startNodeId().toString).get
+        val end = idMap.get(relation.endNodeId().toString).get
+        relationshipTuples.+=(List(start, relation.`type`(), end))
       }
-
 
     }
 
-    //compact(render(relationshipTuples))
-    compact(render(idMap))
+    var architect_id_list = idMap.values.toList
+
+    val relStr = compact(render(relationshipTuples))
+    val nodeStr = compact(render(architect_id_list))
+    s"""{"nodes": $nodeStr, "relationships": $relStr}"""
 
   }
 
