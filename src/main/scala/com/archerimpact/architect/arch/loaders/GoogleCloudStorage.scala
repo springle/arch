@@ -27,7 +27,7 @@ object GoogleCloudStorage extends Loader {
 
   private def chooseParser(splitURL: Array[String]): Parser = {
     val suffix = splitURL.drop(1).dropRight(1).mkString(".")
-    val parserLoc = "com.archerimpact.architect.keystone.parsers.countries." + suffix
+    val parserLoc = "com.archerimpact.architect.arch.parsers.countries." + suffix
     Class.forName(parserLoc).getConstructor().newInstance().asInstanceOf[Parser]
   }
 }
