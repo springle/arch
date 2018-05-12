@@ -15,7 +15,7 @@ class ofac extends JSONParser {
   def getName(jv: JValue): String = compact(render(jv \ "identity" \ "primary" \ "display_name"))
 
   /* Utility function to extract identifying documents */
-  def getIdentifyingDocuments(jv: JValue): List[identifyingDocument] = jv match {
+  def getIdentifyingDocuments(jv: JValue): List[identifyingDocument] = (jv: @unchecked) match {
     case JArray(List()) => List[identifyingDocument]()
     case JArray(documents) =>
       documents.children.map(document => identifyingDocument(
@@ -28,7 +28,7 @@ class ofac extends JSONParser {
   }
 
   /* Utility function to extract links */
-  def getLinks(id: String, jv: JValue): List[Link] = jv match {
+  def getLinks(id: String, jv: JValue): List[Link] = (jv: @unchecked) match {
     case JArray(List()) => List[Link]()
     case JArray(links) =>
       links.
@@ -70,7 +70,7 @@ class ofac extends JSONParser {
       map(idDoc => Link(id, "HAS_ID_DOC", idDoc.id)).toList
 
     /* Determine entity type */
-    val proto = subtype match {
+    val proto = (subtype: @unchecked) match {
       case JString("Entity") =>
         organization(name)
       case JString("Individual") =>
