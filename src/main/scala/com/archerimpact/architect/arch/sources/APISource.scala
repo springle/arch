@@ -27,9 +27,9 @@ object APISource extends HttpApp {
     pathPrefix("graph") {
       path(Segment) { architect_id =>
         get {
-          val refined_id = architect_id.replaceAll("_", "/")
-          println(refined_id)
-          val node = getFullGraph(refined_id)
+          //val refined_id = architect_id.replaceAll("_", "/")
+          //println(refined_id)
+          val node = getFullGraph(architect_id)
           complete(HttpEntity(ContentTypes.`application/json`, "" + node))
         }
       }
