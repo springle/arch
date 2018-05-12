@@ -23,16 +23,23 @@ object APISource extends HttpApp {
   private val index = scala.util.Properties.envOrElse("ELASTIC_INDEX", "entities")
 
 
+//  override def routes: Route =
+//    pathPrefix("graph") {
+//      path(Segment) { architect_id =>
+//        get {
+//          //val refined_id = architect_id.replaceAll("_", "/")
+//          //println(refined_id)
+//          val node = getFullGraph(architect_id)
+//          complete(HttpEntity(ContentTypes.`application/json`, "" + node))
+//        }
+//      }
+//    }
+
   override def routes: Route =
-    pathPrefix("graph") {
-      path(Segment) { architect_id =>
-        get {
-          //val refined_id = architect_id.replaceAll("_", "/")
-          //println(refined_id)
-          val node = getFullGraph(architect_id)
-          complete(HttpEntity(ContentTypes.`application/json`, "" + node))
-        }
-      }
+    parameters("id", "degrees") { (architect_id, degrees) =>
+      print(s"Getting $degrees degrees of data for node with id: $architect_id")
+      val node = getFullGraph(architect_id)
+      complete(HttpEntity(ContentTypes.`application/json`, "" + node))
     }
 
   def getGraphNode(architect_id: String): String = {
@@ -93,7 +100,7 @@ object APISource extends HttpApp {
 //      println(getNodeInfo(arch_id))
 //    }
 
-    print(getNodeInfo("gs://archer-source-data/usa/ofac/sdn.json/10575"))
+    //print(getNodeInfo("gs://archer-source-data/usa/ofac/sdn.json/10575"))
 
     val relStr = compact(render(relationshipTuples))
     val nodeStr = compact(render(idMap))
