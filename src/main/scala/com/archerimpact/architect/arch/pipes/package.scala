@@ -7,9 +7,9 @@ import org.neo4j.driver.v1.{Driver, GraphDatabase, Session}
 package object pipes {
 
   def newElasticClient(): HttpClient = {
-      val host = scala.util.Properties.envOrElse("ELASTIC_HOST", "localhost")
-      val port = scala.util.Properties.envOrElse("ELASTIC_PORT", "9200")
-      HttpClient(elastic4s.ElasticsearchClientUri(host, port.toInt))
+    val host = scala.util.Properties.envOrElse("ELASTIC_HOST", "localhost")
+    val port = scala.util.Properties.envOrElse("ELASTIC_PORT", "9200")
+    HttpClient(elastic4s.ElasticsearchClientUri(host, port.toInt))
   }
 
   def newNeo4jSession(): Session = {

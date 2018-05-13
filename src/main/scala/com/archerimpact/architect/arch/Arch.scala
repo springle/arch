@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory
 */
 
 class ArchPipeline extends Pipeline {
-  override def build(): Unit = new RMQSource() ->:(
+  override def build(): Unit = new RMQSource ->:(
     new LoaderPipe
       |: new ParserPipe
       |: new ElasticPipe

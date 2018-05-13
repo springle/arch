@@ -3,47 +3,17 @@ package com.archerimpact.architect.arch.parsers.countries.usa
 import com.archerimpact.architect.arch.parsers.formats.JSONParser
 import com.archerimpact.architect.arch.shipments.{Entity, GraphShipment, Link}
 import com.archerimpact.architect.ontology._
-import org.json4s._
 import org.json4s.JsonDSL._
-import org.json4s.native.JsonMethods._
+import org.json4s._
 
 case class PartialGraph(entities: List[Entity] = List[Entity](), links: List[Link] = List[Link]())
 
 class ofac extends JSONParser {
 
+  implicit val formats: DefaultFormats.type = DefaultFormats
+
   /* Utility function to extract name */
-  def getName(jv: JValue): String = compact(render(jv \ "identity" \ "primary" \ "display_name"))
-
-  /* Utility function to extract identifying documents */
-  def getIdentifyingDocuments(jv: JValue): List[identifyingDocument] = jv match {
-    case JArray(List()) => List[identifyingDocument]()
-    case JArray(documents) =>
-      documents.children.map(document => identifyingDocument(
-        number = compact(render(document \ "id_number")),
-        numberType = compact(render(document \ "type")),
-        issuedBy = compact(render(document \ "issued_by")),
-        issuedIn = compact(render(document \ "issued_in")),
-        valid = document \ "validity" == JString("Valid")
-      ))
-  }
-
-  /* Utility function to extract links */
-  def getLinks(id: String, jv: JValue): List[Link] = jv match {
-    case JArray(List()) => List[Link]()
-    case JArray(links) =>
-      links.
-        children.
-        map(link => compact(render(link \ "is_reverse")) match {
-          case "false" => Link(
-            subjId = id,
-            predicate = convertPredicate(compact(render(link \ "relation_type"))),
-            objId = compact(render(link \ "linked_id")))
-          case "true" => Link(
-            subjId = compact(render(link \ "linked_id")),
-            predicate = convertPredicate(compact(render(link \ "relation_type"))),
-            objId = id)
-      })
-  }
+  def getName(jv: JValue): String = (jv \ "identity" \ "primary" \ "display_name").extract[String]
 
   /* Utility function to transform predicate names */
   def convertPredicate(predicate: String): String = predicate match {
@@ -56,37 +26,102 @@ class ofac extends JSONParser {
     case `predicate` if predicate.contains("Leader or official of") => "LEADER_OF"
   }
 
+  /* Utility function to create basic protobuf of a variable type (for aliases, etc.) */
+  def getProtoForSubtype(subtype: String, name: String): scalapb.GeneratedMessage = (subtype: @unchecked) match {
+    case "Entity"     => organization(name)
+    case "Individual" => person(name)
+    case "Vessel"     => vessel(name)
+    case "Aircraft"   => aircraft(name)
+  }
+
+  /* Utility function to extract identifying documents */
+  def getIdentifyingDocuments(jv: JValue): List[identifyingDocument] = (jv: @unchecked) match {
+    case JArray(List()) => List[identifyingDocument]()
+    case JArray(documents) =>
+      documents.children.map(document => identifyingDocument(
+        number = (document \ "id_number").extract[String],
+        numberType = (document \ "type").extract[String],
+        issuedBy = (document \ "issued_by").extract[String],
+        issuedIn = (document \ "issued_in").extract[String],
+        valid = document \ "validity" == JString("Valid")
+      ))
+  }
+
+  /* Utility function to get aliases for an entity */
+  def getAliases(jv: JValue, subtype: String, id: String): List[Entity] = jv match {
+    case JArray(aliases) =>
+      aliases.children.map(alias => Entity(
+        id = s"$id/aka/" + (alias \\ "display_name").extract[String],
+        proto = getProtoForSubtype(subtype, (alias \\ "display_name").extract[String])
+      ))
+    case _ => List[Entity]()
+  }
+
+  /* Utility function to extract links */
+  def getLinks(id: String, jv: JValue): List[Link] = (jv: @unchecked) match {
+    case JArray(List()) => List[Link]()
+    case JArray(links) =>
+      links.
+        children.
+        map(link =>
+          if ((link \ "is_reverse").extract[Boolean])
+            Link(
+              subjId = (link \ "linked_id").extract[String],
+              predicate = convertPredicate((link \ "relation_type").extract[String]),
+              objId = id)
+          else
+            Link(
+              subjId = id,
+              predicate = convertPredicate((link \ "relation_type").extract[String]),
+              objId = (link \ "linked_id").extract[String])
+        )
+  }
+
+  /*
+   *    Main function to run on each entry in the OFAC JSON.
+   *    Returns a PartialGraph with a list of entities and a list of links.
+   *    These partial graphs will be merged together to create the full GraphShipment.
+   */
   def getPartialGraph(listing: JValue): PartialGraph = {
 
     /* Extract fields */
-    val id = compact(render(listing \ "fixed_ref"))
+    val id = (listing \ "fixed_ref").extract[String]
     val name = getName(listing)
-    val subtype = listing \ "party_sub_type"
-
-    /* Extract ID documents */
-    val idDocs: List[Entity] = getIdentifyingDocuments(listing \ "documents").
-      map(idDoc => Entity(idDoc.number, idDoc)).toList
-    val idDocLinks: List[Link] = idDocs.
-      map(idDoc => Link(id, "HAS_ID_DOC", idDoc.id)).toList
+    val subtype = (listing \ "party_sub_type").extract[String]
 
     /* Determine entity type */
-    val proto = subtype match {
-      case JString("Entity") =>
-        organization(name)
-      case JString("Individual") =>
-        person(name)
-      case JString("Vessel") =>
-        vessel(name)
-      case JString("Aircraft") =>
-        aircraft(name)
+    val proto = (subtype: @unchecked) match {
+      case "Entity"     => organization(name)
+      case "Individual" => person(name)
+      case "Vessel"     => vessel(name)
+      case "Aircraft"   => aircraft(name)
     }
 
+    /* Extract ID documents */
+    val idDocs: List[Entity] =
+      getIdentifyingDocuments(listing \ "documents").
+      map(idDoc => Entity(idDoc.number, idDoc))
+    val idDocLinks: List[Link] =
+      idDocs.
+      map(idDoc => Link(id, "HAS_ID_DOC", idDoc.id))
+
+    /* Extract aliases */
+    val aliases = getAliases(listing \\ "aliases", subtype, id)
+    val aliasLinks = aliases.map(alias => Link(id, "AKA", alias.id))
+
+    /* Extract official links */
+    val officialLinks = getLinks(id, listing \ "linked_profiles")
+
+    /* Generate primary entity for listing */
+    val primaryEntity = Entity(id, proto)
+
     /* Generate partial graph */
-    val `entities` = Entity(id, proto) :: idDocs
-    val `links` = getLinks(id, listing \ "linked_profiles") ::: idDocLinks
-    PartialGraph(`entities`, `links`)
+    val entities = primaryEntity :: idDocs ::: aliases
+    val links = officialLinks ::: idDocLinks ::: aliasLinks
+    PartialGraph(entities, links)
   }
 
+  /* Utility function to merge partial graphs */
   def merge(a: PartialGraph, b: PartialGraph): PartialGraph =
     a.copy(entities = a.entities ::: b.entities, links = a.links ::: b.links)
 

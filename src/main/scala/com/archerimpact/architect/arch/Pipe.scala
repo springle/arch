@@ -17,19 +17,32 @@ class Pipe[InType, OutType](next: Seq[ActorRef], flow: InType => OutType) extend
 abstract class PipeSpec {
   type InType
   type OutType
+
+  /* Perform the pipe's function/transformation */
   def flow(input: InType): OutType
-  def props(next: Seq[ActorRef]): Props = Props(new Pipe[InType, OutType](next, flow))
-  def instantiate(context: ActorContext, next: Seq[ActorRef]): ActorRef = context.actorOf(props(next), typeName(this))
+
+  /* Instructions to create the pipe */
+  def props(next: Seq[ActorRef]): Props =
+    Props(new Pipe[InType, OutType](next, flow))
+
+  /* Install the pipe in the actor system */
+  def instantiate(context: ActorContext, next: Seq[ActorRef]): ActorRef =
+    context.actorOf(props(next), typeName(this))
 }
 
 class PipeFitting[InType] (
                           val next: Seq[ActorRef],
                           val context: ActorContext
                           ) {
-  def |:(pipeSpec: PipeSpec) = new PipeFitting[pipeSpec.InType](
-    next = List(pipeSpec.instantiate(context, next)),
-    context = context
-  )
+
+  /* Chain two pipes together */
+  def |:(pipeSpec: PipeSpec) =
+    new PipeFitting[pipeSpec.InType] (
+      next = List(pipeSpec.instantiate(context, next)),
+      context = context
+    )
+
+  /* Connect a source to a pipe */
   def ->:(sourceSpec: SourceSpec): Unit =
     sourceSpec.instantiate(context, next) ! Source.StartSending
 }
