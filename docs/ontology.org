@@ -1,0 +1,20 @@
+* Ontology
+
+An ontology is a set of concepts and categories in a subject area or
+domain that shows their properties and the relations between them. For
+architect, as more public datasets become integrated, everything needs
+to agree on a common ontology (eg. what describes a person, company,
+event, etc). Defining a global ontology is an incredibly subjective
+and difficult task, so Arch adheres to the following principles:
+
+- separate the ontology from the rest of the pipeline
+- expect constant changes to the ontology, and therefore design for
+  backwards-compatibility
+
+In order to achieve these goals, Arch maintains a description of its
+"view of the world" in a set of protobufs in the
+=src/main/protobuf/=. Read more about protobufs [[https://github.com/google/protobuf][here]]. Arch uses the
+proto3 syntax.
+
+Once compiled, these protobufs behave like Scala case classes which
+are available to every package within Arch.
