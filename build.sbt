@@ -29,3 +29,30 @@ libraryDependencies ++= Seq(
   "com.sksamuel.elastic4s" %% "elastic4s-embedded" % elastic4sVersion % "test",
   "com.sksamuel.elastic4s" %% "elastic4s-json4s" % elastic4sVersion
 )
+
+import NativePackagerHelper._
+
+enablePlugins(JavaAppPackaging, DockerPlugin)
+
+javaOptions in Universal ++= Seq(
+  "-Dconfig.file=/usr/local/etc/container.conf",
+  "-Dlog4j.configuration=file:/usr/local/etc/log4j.properties"
+)
+
+packageName in Docker := packageName.value
+
+version in Docker := version.value
+
+dockerExposedPorts := List(8080)
+
+dockerLabels := Map("maintainer" -> "15springle@gmail.com")
+
+dockerBaseImage := "openjdk"
+
+dockerRepository := Some("gcr.io/flagship-178000")
+
+defaultLinuxInstallLocation in Docker := "/usr/local"
+
+daemonUser in Docker := "daemon"
+
+mappings in Universal ++= directory( baseDirectory.value / "src" / "main" / "resources" )
