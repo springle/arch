@@ -58,7 +58,7 @@ object APISource extends HttpApp {
     //extract info from neo4j records response
     var hN = resp.hasNext
 
-    var relationshipTuples = new ListBuffer[List[String]]()
+    var relationshipTuples = new ListBuffer[Map[String, String]]()
     var idMap = mutable.Map[String, String]()
 
     if (hN) {
@@ -80,7 +80,19 @@ object APISource extends HttpApp {
         var relation = rels.get(i).asRelationship()
         val start = idMap.get(relation.startNodeId().toString).get
         val end = idMap.get(relation.endNodeId().toString).get
-        relationshipTuples.+=(List(start, relation.`type`(), end))
+
+        var cleanStart = start.toString.replace("\\","")
+        cleanStart = cleanStart.substring(1, cleanStart.length-1)
+
+        var cleanEnd = end.toString.replace("\\","")
+        cleanEnd = cleanEnd.substring(1, cleanEnd.length-1)
+
+        var relMap = mutable.Map[String, String]()
+        relMap.+=("source" -> cleanStart.toString)
+        relMap.+=("type" -> relation.`type`.toString)
+        relMap.+=("target" -> cleanEnd.toString)
+
+        relationshipTuples.+=(relMap.toMap)
       }
 
     }
@@ -98,14 +110,12 @@ object APISource extends HttpApp {
       nodeMap.+=(getNodeInfo(arch_id.toString))
     }
 
-    val relStr = compact(render(relationshipTuples))
+    val relStr = compact(render(decompose(relationshipTuples)))
     val nodeStr = compact(render(decompose(nodeMap)))
 
-    println(relationshipTuples)
-
-    println("-----")
-
-    println(nodeMap)
+    //println(relationshipTuples)
+    //println("-----")
+    //println(nodeMap)
 
     s"""{"nodes": $nodeStr, "relationships": $relStr}"""
 
@@ -117,7 +127,7 @@ object APISource extends HttpApp {
     var cleaned_id = architect_id.replace("\\","")
     cleaned_id = cleaned_id.substring(1, cleaned_id.length-1)
 
-    println(cleaned_id)
+    //println(cleaned_id)
 
     val resp = elasticClient.execute{
       search("entities*") query idsQuery(cleaned_id)
