@@ -1,17 +1,17 @@
 package com.archerimpact.architect.arch.shipments
 
-import com.archerimpact.architect.ontology.source
-import scalapb.descriptors.PMessage
-
 object GraphShipment {
+
+  def global(id: String, url: String): String =
+    s"$url/$id".replace("'","").replace("\"","")
 
   /* Enforce global uniqueness on entities */
   def globalEntities(entities: List[Entity], url: String): List[Entity] =
-    entities.map(entity => entity.copy(id = s"$url/${entity.id}"))
+    entities.map(entity => entity.copy(id = global(entity.id, url)))
 
   /* Enforce global uniqueness on links */
   def globalLinks(links: List[Link], url: String): List[Link] =
-    links.map(link => link.copy(subjId = s"$url/${link.subjId}", objId = s"$url/${link.objId}"))
+    links.map(link => link.copy(subjId = global(link.subjId, url), objId = global(link.objId, url)))
 
   def apply(entities: List[Entity], links: List[Link], url: String): GraphShipment = {
     new GraphShipment(

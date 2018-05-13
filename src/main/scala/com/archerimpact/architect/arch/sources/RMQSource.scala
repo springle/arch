@@ -5,13 +5,13 @@ import com.archerimpact.architect.arch.SourceSpec
 import com.archerimpact.architect.arch.shipments.UrlShipment
 import com.newmotion.akka.rabbitmq._
 
-class RMQSource(
-                val username: String = "architect",
-                val password: String = "gotpublicdata",
-                val host: String = "localhost",
-                val port: Int = 5672,
-                val exchange: String = "sources"
-              ) extends SourceSpec {
+class RMQSource extends SourceSpec {
+
+  val username = scala.util.Properties.envOrElse("RMQ_USERNAME", "architect")
+  val password = scala.util.Properties.envOrElse("RMQ_PASSWORD", "gotpublicdata")
+  val host = scala.util.Properties.envOrElse("RMQ_HOST", "localhost")
+  val port = scala.util.Properties.envOrElse("RMQ_PORT", "5672").toInt
+  val exchange = scala.util.Properties.envOrElse("RMQ_EXCHANGE", "sources")
 
   private def fromBytes(x: Array[Byte]) = new String(x, "UTF-8")
 
