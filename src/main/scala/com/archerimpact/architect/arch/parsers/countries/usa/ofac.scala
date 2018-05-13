@@ -100,7 +100,7 @@ class ofac extends JSONParser {
     /* Extract ID documents */
     val idDocs: List[Entity] =
       getIdentifyingDocuments(listing \ "documents").
-      map(idDoc => Entity(idDoc.number, idDoc))
+      map(idDoc => Entity(id + "/idDoc/" + idDoc.number, idDoc))
     val idDocLinks: List[Link] =
       idDocs.
       map(idDoc => Link(id, "HAS_ID_DOC", idDoc.id))

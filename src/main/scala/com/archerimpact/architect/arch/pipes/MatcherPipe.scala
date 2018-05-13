@@ -3,7 +3,6 @@ package com.archerimpact.architect.arch.pipes
 import com.archerimpact.architect.arch._
 import com.archerimpact.architect.arch.shipments.{GraphShipment, Link}
 import com.sksamuel.elastic4s.http.ElasticDsl._
-import org.neo4j.driver.v1.Transaction
 
 class MatcherPipe extends PipeSpec {
 
@@ -46,7 +45,6 @@ class MatcherPipe extends PipeSpec {
       ).await
       hit <- response.result.hits.hits if hit.id != entity.id
     } uploadAndLogLink(entity.id, s"possibly_same_$fieldName".toUpperCase, hit.id)
-    println("created links")
   }
 
   override def flow(input: GraphShipment): GraphShipment = {

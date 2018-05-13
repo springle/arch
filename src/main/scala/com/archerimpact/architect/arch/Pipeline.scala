@@ -12,6 +12,6 @@ trait Pipeline extends Actor with ActorLogging {
     new PipeFitting[pipeSpec.InType](List(pipeSpec.instantiate(context, List(self))), context)
 
   override def receive: Receive = {
-    case _ => None
+    case _ => log.info("Message reached sink")
   }
 }
