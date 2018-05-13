@@ -17,5 +17,8 @@
  #+END_SRC
 
 Arch is a data pipeline to build and maintain the
-state of Architect. See [[https://github.com/springle/arch-tools][arch-tools]] for companion tools.
+state of Architect.
 
+See [[https://github.com/springle/arch-tools][arch-tools]] for companion tools.
+
+Read the [[docs/index.org][docs]].
