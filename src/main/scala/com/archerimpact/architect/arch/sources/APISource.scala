@@ -14,6 +14,7 @@ import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.native.JsonMethods._
 import org.json4s.JValue
+import org.json4s.Extraction._
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -37,31 +38,20 @@ object APISource extends HttpApp {
 
   override def routes: Route =
     parameters("id", "degrees") { (architect_id, degrees) =>
-      print(s"Getting $degrees degrees of data for node with id: $architect_id")
-      val node = getFullGraph(architect_id)
+      println(s"Getting $degrees degrees of data for node with id: $architect_id")
+
+      val node = getFullGraph(architect_id, degrees)
       complete(HttpEntity(ContentTypes.`application/json`, "" + node))
     }
 
-  def getGraphNode(architect_id: String): String = {
-    val neo4jSession = newNeo4jSession()
 
-    //TODO: change id to architect_id
-    val fullQuery =
-      s"""
-         MATCH (n1) WHERE n1.architect_id=$architect_id RETURN n1
-      """.stripMargin
-
-    val resp = neo4jSession.run(fullQuery)
-    resp.list().toString
-  }
-
-  def getFullGraph(architect_id: String): String = {
+  def getFullGraph(architect_id: String, degrees: String): String = {
     //create new neo4j session
     val neo4jSession = newNeo4jSession()
 
     //query neo4j for all nodes connected to start node with architect_id
     var fullQuery =
-      s"""MATCH path=(g)-[r*0..5]-(p) WHERE g.architectId='$architect_id' UNWIND r as rel UNWIND nodes(path) as n RETURN COLLECT(distinct rel) AS collected, COLLECT(distinct n) as nodes, g""".stripMargin
+      s"""MATCH path=(g)-[r*0..$degrees]-(p) WHERE g.architectId='$architect_id' UNWIND r as rel UNWIND nodes(path) as n RETURN COLLECT(distinct rel) AS collected, COLLECT(distinct n) as nodes, g""".stripMargin
 
     var resp = neo4jSession.run(fullQuery)
 
@@ -81,12 +71,12 @@ object APISource extends HttpApp {
       val relSize = rels.size()
       val numNodes = nodes.size()
 
-      for (i <- 0 to numNodes-1) {
+      for (i <- 0 until numNodes) {
         var node = nodes.get(i).asNode()
         idMap.+=(node.id().toString -> node.get("architectId").toString)
       }
 
-      for (i <- 0 to relSize-1) {
+      for (i <- 0 until relSize) {
         var relation = rels.get(i).asRelationship()
         val start = idMap.get(relation.startNodeId().toString).get
         val end = idMap.get(relation.endNodeId().toString).get
@@ -95,31 +85,53 @@ object APISource extends HttpApp {
 
     }
 
+//    var nodeMap = mutable.Map[String, String]()
+//
 //    var architect_id_list = idMap.values.toList
 //    for (arch_id <- architect_id_list) {
-//      println(getNodeInfo(arch_id))
+//      nodeMap.+=(arch_id.toString -> getNodeInfo(arch_id))
 //    }
+    implicit val formats: DefaultFormats.type = DefaultFormats
 
-    //print(getNodeInfo("gs://archer-source-data/usa/ofac/sdn.json/10575"))
+    var nodeMap = new ListBuffer[Map[String, AnyRef]]
+    for (arch_id <- idMap.values.toList) {
+      nodeMap.+=(getNodeInfo(arch_id.toString))
+    }
 
     val relStr = compact(render(relationshipTuples))
-    val nodeStr = compact(render(idMap))
+    val nodeStr = compact(render(decompose(nodeMap)))
+
+    println(relationshipTuples)
+
+    println("-----")
+
+    println(nodeMap)
+
     s"""{"nodes": $nodeStr, "relationships": $relStr}"""
 
   }
 
-  def getNodeInfo(architect_id: String): String = {
+  def getNodeInfo(architect_id: String): Map[String, AnyRef] = {
     val elasticClient = newElasticClient()
 
-    println(architect_id)
+    var cleaned_id = architect_id.replace("\\","")
+    cleaned_id = cleaned_id.substring(1, cleaned_id.length-1)
+
+    println(cleaned_id)
 
     val resp = elasticClient.execute{
-      search(s"entities*") query idsQuery(architect_id)
+      search("entities*") query idsQuery(cleaned_id)
     }.await
 
     resp match {
-      case Left(failure) => "We failed " + failure.error
-      case Right(results) => compact(render(results.result.hits.hits(0).sourceAsString))
+      case Left(failure) => null
+      case Right(results) => {
+        var matchHit = results.result.hits.hits(0)
+        var retMap = matchHit.sourceAsMap
+        retMap.+=("type" -> matchHit.`type`)
+        retMap.+=("architectId" -> matchHit.id)
+        retMap
+      }
     }
 
 
