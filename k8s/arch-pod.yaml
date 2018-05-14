@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: arch
+  labels:
+    app: arch
+spec:
+  containers:
+  - image: us.gcr.io/flagship-178000/arch:0.1.1
+    name: arch
+    imagePullPolicy: Always
+    ports:
+    - containerPort: 2724
+      name: api
+    env:
+    - name: ELASTIC_HOST
+      value: "elastic"
+    - name: ELASTIC_PORT
+      value: "9200"
+    - name: RMQ_HOST
+      value: "rabbitmq"
+    - name: RMQ_PORT
+      value: "5672"
+    - name: RMQ_USERNAME
+      value: "user"
+    - name: RMQ_PASSWORD
+      value: "password"
+    - name: NEO4J_HOST
+      value: "neo4j"
+    - name: NEO4J_PORT
+      value: "7687"

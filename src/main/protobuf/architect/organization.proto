@@ -10,5 +10,5 @@ option (scalapb.options) = {
 };
 
 message organization {
-    string name_ = 1;
+    string name = 1;
 }

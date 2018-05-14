@@ -1,5 +1,5 @@
 name := "arch"
-version := "0.1"
+version := "0.1.1"
 
 lazy val akkaVersion = "2.5.3"
 lazy val elastic4sVersion = "6.2.5"
@@ -28,4 +28,24 @@ libraryDependencies ++= Seq(
   "com.sksamuel.elastic4s" %% "elastic4s-testkit" % elastic4sVersion % "test",
   "com.sksamuel.elastic4s" %% "elastic4s-embedded" % elastic4sVersion % "test",
   "com.sksamuel.elastic4s" %% "elastic4s-json4s" % elastic4sVersion
+)
+
+/**********/
+/* DOCKER */
+/**********/
+
+import NativePackagerHelper._
+enablePlugins(JavaAppPackaging, DockerPlugin)
+
+packageName in Docker := "flagship-178000/arch"
+version in Docker := version.value
+dockerExposedPorts := List(2724)
+dockerLabels := Map("maintainer" -> "15springle@gmail.com")
+dockerBaseImage := "openjdk"
+dockerRepository := Some("us.gcr.io")
+defaultLinuxInstallLocation in Docker := "/usr/local"
+daemonUser in Docker := "daemon"
+mappings in Universal ++= directory( baseDirectory.value / "src" / "main" / "resources" )
+javaOptions in Universal ++= Seq(
+  "-Dlog4j.configuration=file:/usr/local/etc/log4j.properties"
 )

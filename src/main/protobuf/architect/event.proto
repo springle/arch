@@ -9,6 +9,7 @@ option (scalapb.options) = {
     flat_package: true
 };
 
-message person {
+message event {
     string name = 1;
+    string date = 2;
 }
