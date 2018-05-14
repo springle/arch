@@ -29,8 +29,8 @@ class ArchPipeline extends Pipeline {
     new LoaderPipe
       |: new ParserPipe
       |: new ElasticPipe
-      |: new Neo4jPipe
-      |: new MatcherPipe
+//    |: new Neo4jPipe
+//    |: new MatcherPipe
       \: this
     )
 }
@@ -39,7 +39,6 @@ object Arch extends App {
   LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger].setLevel(Level.WARN)
   val system = ActorSystem("arch")
   val archPipeline = system.actorOf(Props(new ArchPipeline), "pipeline")
-
-  APISource.startServer("localhost", 8080, system)
+  APISource.startServer("0.0.0.0", 2724, system)
 }
 

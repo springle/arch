@@ -3,7 +3,6 @@ syntax = "proto3";
 package architect;
 
 import "scalapb/scalapb.proto";
-import "architect/identifyingDocument.proto";
 
 option (scalapb.options) = {
     package_name: "com.archerimpact.architect.ontology"
