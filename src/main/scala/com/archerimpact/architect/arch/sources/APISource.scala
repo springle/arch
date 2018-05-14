@@ -34,12 +34,16 @@ object APISource extends HttpApp {
 
       degrees match {
         case "0" => {
-          val singleNodeInfo: String = compact(render(decompose(getNodeInfo(architect_id.toString))))
+          var lb = new ListBuffer[Map[String, AnyRef]]()
+          lb.+=(getNodeInfo(architect_id.toString))
+          val jsonData: String = compact(render(decompose(lb)))
+          var singleNodeInfo: String = s"""{"nodes" : $jsonData, "links": []}"""
+
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
             complete(HttpEntity(ContentTypes.`application/json`, "" + singleNodeInfo))
           }
         } case _ => {
-          val graphData = getFullGraph(architect_id, degrees)
+          val graphData = getFullGraph(architect_id, (degrees.toInt+1).toString)
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
             complete(HttpEntity(ContentTypes.`application/json`, "" + graphData))
           }
@@ -101,9 +105,13 @@ object APISource extends HttpApp {
 
     }
 
+    var linksMap = getNeighborLinkCounts(architect_id, degrees.toInt)
+
     var nodeMap = new ListBuffer[Map[String, AnyRef]]
     for (arch_id <- idMap.values.toList) {
-      nodeMap.+=(getNodeInfo(arch_id.toString))
+      var nd = mutable.Map() ++ getNodeInfo(arch_id.toString)
+      nd.+=("linksCount" -> linksMap.get(nd.get("id").get.toString).get.toString)
+      nodeMap.+=(nd.toMap)
     }
 
     val relStr = compact(render(decompose(relationshipTuples)))
