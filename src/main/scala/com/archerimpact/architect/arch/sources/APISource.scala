@@ -43,7 +43,7 @@ object APISource extends HttpApp {
             complete(HttpEntity(ContentTypes.`application/json`, "" + singleNodeInfo))
           }
         } case _ => {
-          val graphData = getFullGraph(architect_id, (degrees.toInt+1).toString)
+          val graphData = getFullGraph(architect_id, degrees)
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
             complete(HttpEntity(ContentTypes.`application/json`, "" + graphData))
           }
