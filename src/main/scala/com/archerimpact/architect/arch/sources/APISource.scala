@@ -109,7 +109,7 @@ object APISource extends HttpApp {
     val relStr = compact(render(decompose(relationshipTuples)))
     val nodeStr = compact(render(decompose(nodeMap)))
 
-    s"""{"nodes": $nodeStr, "relationships": $relStr}"""
+    s"""{"nodes": $nodeStr, "links": $relStr}"""
 
   }
 
