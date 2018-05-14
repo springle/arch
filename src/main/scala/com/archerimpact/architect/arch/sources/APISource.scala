@@ -20,28 +20,26 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object APISource extends HttpApp {
-  private val apiVersion = "v1"
-  private val index = scala.util.Properties.envOrElse("ELASTIC_INDEX", "entities")
 
-
-//  override def routes: Route =
-//    pathPrefix("graph") {
-//      path(Segment) { architect_id =>
-//        get {
-//          //val refined_id = architect_id.replaceAll("_", "/")
-//          //println(refined_id)
-//          val node = getFullGraph(architect_id)
-//          complete(HttpEntity(ContentTypes.`application/json`, "" + node))
-//        }
-//      }
-//    }
+  implicit val formats: DefaultFormats.type = DefaultFormats
 
   override def routes: Route =
     parameters("id", "degrees") { (architect_id, degrees) =>
+
+      //TODO: secure shit, validate architect id and degrees
+
       println(s"Getting $degrees degrees of data for node with id: $architect_id")
 
-      val node = getFullGraph(architect_id, degrees)
-      complete(HttpEntity(ContentTypes.`application/json`, "" + node))
+      degrees match {
+        case "0" => {
+          val singleNodeInfo: String = compact(render(decompose(getNodeInfo(architect_id.toString))))
+          complete(HttpEntity(ContentTypes.`application/json`, "" + singleNodeInfo))
+        } case _ => {
+          val graphData = getFullGraph(architect_id, degrees)
+          complete(HttpEntity(ContentTypes.`application/json`, "" + graphData))
+        }
+      }
+
     }
 
 
@@ -54,7 +52,6 @@ object APISource extends HttpApp {
       s"""MATCH path=(g)-[r*0..$degrees]-(p) WHERE g.architectId='$architect_id' UNWIND r as rel UNWIND nodes(path) as n RETURN COLLECT(distinct rel) AS collected, COLLECT(distinct n) as nodes, g""".stripMargin
 
     var resp = neo4jSession.run(fullQuery)
-
     //extract info from neo4j records response
     var hN = resp.hasNext
 
@@ -97,13 +94,7 @@ object APISource extends HttpApp {
 
     }
 
-//    var nodeMap = mutable.Map[String, String]()
-//
-//    var architect_id_list = idMap.values.toList
-//    for (arch_id <- architect_id_list) {
-//      nodeMap.+=(arch_id.toString -> getNodeInfo(arch_id))
-//    }
-    implicit val formats: DefaultFormats.type = DefaultFormats
+    //implicit val formats: DefaultFormats.type = DefaultFormats
 
     var nodeMap = new ListBuffer[Map[String, AnyRef]]
     for (arch_id <- idMap.values.toList) {
@@ -113,10 +104,6 @@ object APISource extends HttpApp {
     val relStr = compact(render(decompose(relationshipTuples)))
     val nodeStr = compact(render(decompose(nodeMap)))
 
-    //println(relationshipTuples)
-    //println("-----")
-    //println(nodeMap)
-
     s"""{"nodes": $nodeStr, "relationships": $relStr}"""
 
   }
@@ -125,16 +112,16 @@ object APISource extends HttpApp {
     val elasticClient = newElasticClient()
 
     var cleaned_id = architect_id.replace("\\","")
-    cleaned_id = cleaned_id.substring(1, cleaned_id.length-1)
-
-    //println(cleaned_id)
+    if (cleaned_id.charAt(0) == '"'){
+      cleaned_id = cleaned_id.substring(1, cleaned_id.length-1)
+    }
 
     val resp = elasticClient.execute{
       search("entities*") query idsQuery(cleaned_id)
     }.await
 
     resp match {
-      case Left(failure) => null
+      case Left(failure) => mutable.Map[String, AnyRef]().toMap
       case Right(results) => {
         var matchHit = results.result.hits.hits(0)
         var retMap = matchHit.sourceAsMap
