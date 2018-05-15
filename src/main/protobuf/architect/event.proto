@@ -10,6 +10,12 @@ option (scalapb.options) = {
 };
 
 message event {
-    string name = 1;
-    string date = 2;
+    string description = 1;      // What happened?
+    string date = 2;             // When did it happen? (yyyy-mm-dd)
+    Category category = 3;       // What type of event was it?
+    string group = 4;            // Was the event one of several related events?
+
+    enum Category {
+        SANCTION = 0;
+    }
 }

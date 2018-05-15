@@ -4,7 +4,6 @@ import com.archerimpact.architect.arch._
 import com.archerimpact.architect.arch.shipments.GraphShipment
 import com.sksamuel.elastic4s.bulk.BulkCompatibleDefinition
 import com.sksamuel.elastic4s.http.ElasticDsl._
-import com.sksamuel.elastic4s.http.RequestSuccess
 import scalapb.json4s.JsonFormat
 
 class ElasticPipe extends PipeSpec {

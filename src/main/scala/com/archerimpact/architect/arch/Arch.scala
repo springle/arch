@@ -29,8 +29,8 @@ class ArchPipeline extends Pipeline {
     new LoaderPipe
       |: new ParserPipe
       |: new ElasticPipe
-//    |: new Neo4jPipe
-//    |: new MatcherPipe
+      |: new Neo4jPipe
+      |: new MatcherPipe
       \: this
     )
 }

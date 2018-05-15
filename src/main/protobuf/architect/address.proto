@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package architect;
+
+import "scalapb/scalapb.proto";
+
+option (scalapb.options) = {
+    package_name: "com.archerimpact.architect.ontology"
+    flat_package: true
+};
+
+message address {
+    string combined = 1;  // name, line1, line2, city, region, zip, country
+    string line1 = 2;
+    string line2 = 3;
+    string line3 = 4;
+    string city = 5;
+    string region = 6;    // state, province, etc.
+    string zipCode = 7;   // zip code, etc.
+    string country = 8;
+}

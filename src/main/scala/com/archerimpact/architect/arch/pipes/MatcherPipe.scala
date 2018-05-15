@@ -11,7 +11,7 @@ class MatcherPipe extends PipeSpec {
 
   private val index = scala.util.Properties.envOrElse("ELASTIC_INDEX", "entities")
 
-  val matchable = Map("name" -> 1, "number" -> 0)
+  val matchable = Map("number" -> 0)
 
   def uploadAndLogLink(subj: String, pred: String, obj: String): Unit = {
     println(s"($subj)-[:$pred]-($obj)")
