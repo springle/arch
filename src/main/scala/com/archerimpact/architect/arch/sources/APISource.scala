@@ -100,7 +100,11 @@ object APISource extends HttpApp {
         relMap.+=("target" -> cleanEnd.toString)
         relMap.+=("id" -> ("" + cleanStart.toString + relation.`type`.toString + cleanEnd.toString))
 
-        relationshipTuples.+=(relMap.toMap)
+        val filterType = "AKA"
+        if (relation.`type`.toString != filterType){
+          relationshipTuples.+=(relMap.toMap)
+
+        }
       }
 
     }
@@ -110,8 +114,11 @@ object APISource extends HttpApp {
     var nodeMap = new ListBuffer[Map[String, AnyRef]]
     for (arch_id <- idMap.values.toList) {
       var nd = mutable.Map() ++ getNodeInfo(arch_id.toString)
-      nd.+=("linksCount" -> linksMap.get(nd.get("id").get.toString).get.toString)
-      nodeMap.+=(nd.toMap)
+      val linksCount = linksMap.get(nd.get("id").get.toString).get.toString
+      nd.+=("linksCount" -> linksCount)
+      if (linksCount != "0") {
+        nodeMap.+=(nd.toMap)
+      }
     }
 
     val relStr = compact(render(decompose(relationshipTuples)))
@@ -122,7 +129,7 @@ object APISource extends HttpApp {
   }
 
   def getNeighborLinkCounts(architect_id: String, degrees: Int): Map[String, Int] = {
-    //gets all realtionships in a list of all nodes within x degrees
+    //gets all relationships in a list of all nodes within x degrees
     val relList = getAllRelationships(architect_id, (degrees+1).toString)
 
     var idToCountMap = mutable.Map[String, Int]()
@@ -130,16 +137,21 @@ object APISource extends HttpApp {
       var start: String = relMap.get("source").get
       var end: String = relMap.get("target").get
 
+      //FILTER OUT AKA LINKS
+      val filterType = "AKA"
+      var adder = 1
+      if (relMap.get("type").get == filterType) adder = 0
+
       if (idToCountMap.contains(start)) {
-        idToCountMap.update(start, idToCountMap.get(start).get + 1)
+        idToCountMap.update(start, idToCountMap.get(start).get + adder)
       } else {
-        idToCountMap.+=(start -> 1)
+        idToCountMap.+=(start -> adder)
       }
 
       if (idToCountMap.contains(end)) {
-        idToCountMap.update(end, idToCountMap.get(end).get + 1)
+        idToCountMap.update(end, idToCountMap.get(end).get + adder)
       } else {
-        idToCountMap.+=(end -> 1)
+        idToCountMap.+=(end -> adder)
       }
     }
 
