@@ -23,10 +23,12 @@ import scala.collection.mutable.ListBuffer
 
 object APISource extends HttpApp {
 
+  case class graphDataCarrier(nodes: ListBuffer[Map[String, AnyRef]], rels: ListBuffer[Map[String, String]])
+
   implicit val formats: DefaultFormats.type = DefaultFormats
 
   override def routes: Route =
-    parameters("id", "degrees", "expand") { (architect_id, degrees, expand) =>
+    parameters("id", "degrees", "expandby", "exclude") { (architect_id, degrees, expand, exclude) =>
 
       //TODO: secure shit, validate architect id and degrees
 
@@ -43,7 +45,7 @@ object APISource extends HttpApp {
             complete(HttpEntity(ContentTypes.`application/json`, "" + singleNodeInfo))
           }
         } case "1" => {
-          val graphJSON = getExpand(architect_id, expand)
+          val graphJSON = getExpand(architect_id, expand, exclude)
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
             complete(HttpEntity(ContentTypes.`application/json`, "" + graphJSON))
           }
@@ -58,14 +60,131 @@ object APISource extends HttpApp {
     }
 
 
-  def getExpand(architect_id: String, expand: String): String = {
+  def filterGraph(data: graphDataCarrier, filterString: String, exclude: Boolean): graphDataCarrier = {
+    var nodes = data.nodes
+    var rels = data.rels
+
+    var newNodes = new ListBuffer[Map[String, AnyRef]]
+    var newRels = new ListBuffer[Map[String, String]]
+
+    var whiteList = mutable.SortedSet[String]()
+
+    for (rel <- rels) {
+
+      var decider = true
+      if (exclude == true) {
+        decider = rel.get("type").get != filterString
+      } else {
+        decider = rel.get("type").get == filterString
+      }
+
+      if (decider) {
+        whiteList += rel.get("target").get
+        whiteList += rel.get("source").get
+        newRels.+=(rel)
+      }
+    }
+
+    for (node <- nodes) {
+      if (whiteList.contains(node.get("id").get.toString)) {
+        newNodes.+=(node)
+      }
+    }
+
+    graphDataCarrier(newNodes, newRels)
+  }
+
+  def getExpand(architect_id: String, expand: String, exclude: String): String = {
     val degrees = 1
 
+    var oldData = getGraphData(architect_id, degrees.toString)
+
+    var ex = true
+    var filterString = exclude
+    if (expand != "*") {
+      ex = false
+      filterString = expand
+    }
+
+    var newData = oldData
+    if (filterString.contains(",")) {
+      var filterList = filterString.split(",")
+      for (flt <- filterList) {
+        newData = filterGraph(newData, flt, ex)
+      }
+    } else {
+      var newData = filterGraph(oldData, filterString, ex)
+    }
+    val relStr = compact(render(decompose(newData.rels)))
+    val nodeStr = compact(render(decompose(newData.nodes)))
+    s"""{"nodes": $nodeStr, "links": $relStr}"""
+
+
+//    if (exclude != "*") {
+//      var newNodes = new ListBuffer[Map[String, AnyRef]]
+//      var newRels = new ListBuffer[Map[String, String]]
+//
+//      var whiteList = mutable.SortedSet[String]()
+//
+//      for (rel <- relationshipTuples) {
+//        if (rel.get("type").get != exclude) {
+//          whiteList += rel.get("target").get
+//          whiteList += rel.get("source").get
+//          newRels.+=(rel)
+//        }
+//      }
+//
+//      for (node <- nodeMap) {
+//        if (whiteList.contains(node.get("id").get.toString)) {
+//          newNodes.+=(node)
+//        }
+//      }
+//
+//      nodeMap = newNodes
+//      relationshipTuples = newRels
+//    }
+//
+//    expand match {
+//      case "*" => {
+//        val relStr = compact(render(decompose(relationshipTuples)))
+//        val nodeStr = compact(render(decompose(nodeMap)))
+//
+//        s"""{"nodes": $nodeStr, "links": $relStr}"""
+//      } case _ => {
+//        var newNodes = new ListBuffer[Map[String, AnyRef]]
+//        var newRels = new ListBuffer[Map[String, String]]
+//
+//        var whiteList = mutable.SortedSet[String]()
+//
+//        for (rel <- relationshipTuples) {
+//          if (rel.get("type").get == expand) {
+//            whiteList += rel.get("target").get
+//            whiteList += rel.get("source").get
+//            newRels.+=(rel)
+//          }
+//        }
+//
+//        for (node <- nodeMap) {
+//          if (whiteList.contains(node.get("id").get.toString)) {
+//            newNodes.+=(node)
+//          }
+//        }
+//
+//        val relStr = compact(render(decompose(newRels)))
+//        val nodeStr = compact(render(decompose(newNodes)))
+//
+//        s"""{"nodes": $nodeStr, "links": $relStr}"""
+//      }
+//    }
+
+  }
+
+  def getGraphData(architect_id: String, degrees: String): graphDataCarrier = {
     val neo4jSession = newNeo4jSession()
 
     //query neo4j for all nodes connected to start node with architect_id
     var fullQuery =
-      s"""MATCH path=(g)-[r*0..1]-(p) WHERE g.architectId='$architect_id' UNWIND r as rel UNWIND nodes(path) as n RETURN COLLECT(distinct rel) AS collected, COLLECT(distinct n) as nodes, g""".stripMargin
+      s"""MATCH path=(g)-[r*0..$degrees]-(p) WHERE g.architectId='$architect_id' UNWIND r as rel UNWIND nodes(path) as n RETURN COLLECT(distinct rel) AS collected, COLLECT(distinct n) as nodes, g""".stripMargin
 
     var resp = neo4jSession.run(fullQuery)
     //extract info from neo4j records response
@@ -74,43 +193,38 @@ object APISource extends HttpApp {
     var relationshipTuples = new ListBuffer[Map[String, String]]()
     var idMap = mutable.Map[String, String]()
 
-    if (hN) {
-      var record = resp.next()
+    var record = resp.next()
 
-      var rels = record.get("collected")
-      var nodes = record.get("nodes")
-      var thisNode = record.get("g")
+    var rels = record.get("collected")
+    var nodes = record.get("nodes")
+    var thisNode = record.get("g")
 
-      val relSize = rels.size()
-      val numNodes = nodes.size()
+    val relSize = rels.size()
+    val numNodes = nodes.size()
 
-      for (i <- 0 until numNodes) {
-        var node = nodes.get(i).asNode()
-        idMap.+=(node.id().toString -> node.get("architectId").toString)
-      }
+    for (i <- 0 until numNodes) {
+      var node = nodes.get(i).asNode()
+      idMap.+=(node.id().toString -> node.get("architectId").toString)
+    }
 
-      for (i <- 0 until relSize) {
-        var relation = rels.get(i).asRelationship()
-        val start = idMap.get(relation.startNodeId().toString).get
-        val end = idMap.get(relation.endNodeId().toString).get
+    for (i <- 0 until relSize) {
+      var relation = rels.get(i).asRelationship()
+      val start = idMap.get(relation.startNodeId().toString).get
+      val end = idMap.get(relation.endNodeId().toString).get
 
-        var cleanStart = start.toString.replace("\\","")
-        cleanStart = cleanStart.substring(1, cleanStart.length-1)
+      var cleanStart = start.toString.replace("\\","")
+      cleanStart = cleanStart.substring(1, cleanStart.length-1)
 
-        var cleanEnd = end.toString.replace("\\","")
-        cleanEnd = cleanEnd.substring(1, cleanEnd.length-1)
+      var cleanEnd = end.toString.replace("\\","")
+      cleanEnd = cleanEnd.substring(1, cleanEnd.length-1)
 
-        var relMap = mutable.Map[String, String]()
-        relMap.+=("source" -> cleanStart.toString)
-        relMap.+=("type" -> relation.`type`.toString)
-        relMap.+=("target" -> cleanEnd.toString)
-        relMap.+=("id" -> ("" + cleanStart.toString + relation.`type`.toString + cleanEnd.toString))
+      var relMap = mutable.Map[String, String]()
+      relMap.+=("source" -> cleanStart.toString)
+      relMap.+=("type" -> relation.`type`.toString)
+      relMap.+=("target" -> cleanEnd.toString)
+      relMap.+=("id" -> ("" + cleanStart.toString + relation.`type`.toString + cleanEnd.toString))
 
-        relationshipTuples.+=(relMap.toMap)
-
-
-      }
-
+      relationshipTuples.+=(relMap.toMap)
     }
 
     var linksMap = getNeighborLinkCounts(architect_id, degrees.toInt)
@@ -131,39 +245,7 @@ object APISource extends HttpApp {
       nodeMap.+=(nd.toMap)
     }
 
-    expand match {
-      case "*" => {
-        val relStr = compact(render(decompose(relationshipTuples)))
-        val nodeStr = compact(render(decompose(nodeMap)))
-
-        s"""{"nodes": $nodeStr, "links": $relStr}"""
-      } case _ => {
-        var newNodes = new ListBuffer[Map[String, AnyRef]]
-        var newRels = new ListBuffer[Map[String, String]]
-
-        var whiteList = mutable.SortedSet[String]()
-
-        for (rel <- relationshipTuples) {
-          if (rel.get("type").get == expand) {
-            whiteList += rel.get("target").get
-            whiteList += rel.get("source").get
-            newRels.+=(rel)
-          }
-        }
-
-        for (node <- nodeMap) {
-          if (whiteList.contains(node.get("id").get.toString)) {
-            newNodes.+=(node)
-          }
-        }
-
-        val relStr = compact(render(decompose(newRels)))
-        val nodeStr = compact(render(decompose(newNodes)))
-
-        s"""{"nodes": $nodeStr, "links": $relStr}"""
-      }
-    }
-
+    graphDataCarrier(nodeMap, relationshipTuples)
   }
 
   def getFullGraph(architect_id: String, degrees: String): String = {
