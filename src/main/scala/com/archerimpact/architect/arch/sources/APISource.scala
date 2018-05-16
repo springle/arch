@@ -26,7 +26,7 @@ object APISource extends HttpApp {
   implicit val formats: DefaultFormats.type = DefaultFormats
 
   override def routes: Route =
-    parameters("id", "degrees") { (architect_id, degrees) =>
+    parameters("id", "degrees", "expand") { (architect_id, degrees, expand) =>
 
       //TODO: secure shit, validate architect id and degrees
 
@@ -42,6 +42,11 @@ object APISource extends HttpApp {
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
             complete(HttpEntity(ContentTypes.`application/json`, "" + singleNodeInfo))
           }
+        } case "1" => {
+          val graphJSON = getExpand(architect_id, expand)
+          respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
+            complete(HttpEntity(ContentTypes.`application/json`, "" + graphJSON))
+          }
         } case _ => {
           val graphData = getFullGraph(architect_id, degrees)
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
@@ -52,6 +57,112 @@ object APISource extends HttpApp {
 
     }
 
+
+  def getExpand(architect_id: String, expand: String): String = {
+    val degrees = 1
+
+    val neo4jSession = newNeo4jSession()
+
+    //query neo4j for all nodes connected to start node with architect_id
+    var fullQuery =
+      s"""MATCH path=(g)-[r*0..1]-(p) WHERE g.architectId='$architect_id' UNWIND r as rel UNWIND nodes(path) as n RETURN COLLECT(distinct rel) AS collected, COLLECT(distinct n) as nodes, g""".stripMargin
+
+    var resp = neo4jSession.run(fullQuery)
+    //extract info from neo4j records response
+    var hN = resp.hasNext
+
+    var relationshipTuples = new ListBuffer[Map[String, String]]()
+    var idMap = mutable.Map[String, String]()
+
+    if (hN) {
+      var record = resp.next()
+
+      var rels = record.get("collected")
+      var nodes = record.get("nodes")
+      var thisNode = record.get("g")
+
+      val relSize = rels.size()
+      val numNodes = nodes.size()
+
+      for (i <- 0 until numNodes) {
+        var node = nodes.get(i).asNode()
+        idMap.+=(node.id().toString -> node.get("architectId").toString)
+      }
+
+      for (i <- 0 until relSize) {
+        var relation = rels.get(i).asRelationship()
+        val start = idMap.get(relation.startNodeId().toString).get
+        val end = idMap.get(relation.endNodeId().toString).get
+
+        var cleanStart = start.toString.replace("\\","")
+        cleanStart = cleanStart.substring(1, cleanStart.length-1)
+
+        var cleanEnd = end.toString.replace("\\","")
+        cleanEnd = cleanEnd.substring(1, cleanEnd.length-1)
+
+        var relMap = mutable.Map[String, String]()
+        relMap.+=("source" -> cleanStart.toString)
+        relMap.+=("type" -> relation.`type`.toString)
+        relMap.+=("target" -> cleanEnd.toString)
+        relMap.+=("id" -> ("" + cleanStart.toString + relation.`type`.toString + cleanEnd.toString))
+
+        relationshipTuples.+=(relMap.toMap)
+
+
+      }
+
+    }
+
+    var linksMap = getNeighborLinkCounts(architect_id, degrees.toInt)
+
+    var nodeMap = new ListBuffer[Map[String, AnyRef]]
+    for (arch_id <- idMap.values.toList) {
+      var nd = mutable.Map() ++ getNodeInfo(arch_id.toString)
+      var linksCountMap = mutable.Map() ++ linksMap.get(nd.get("id").get.toString).get
+      var total = 0
+      for (tp <- linksCountMap.keys) {
+        var count = linksCountMap.get(tp).get
+        nd.+=(tp.toString + "_links" -> count.toString)
+        total += count
+      }
+      nd.+=("total_links" -> total.toString)
+      nodeMap.+=(nd.toMap)
+    }
+
+    expand match {
+      case "*" => {
+        val relStr = compact(render(decompose(relationshipTuples)))
+        val nodeStr = compact(render(decompose(nodeMap)))
+
+        s"""{"nodes": $nodeStr, "links": $relStr}"""
+      } case _ => {
+        var newNodes = new ListBuffer[Map[String, AnyRef]]
+        var newRels = new ListBuffer[Map[String, String]]
+
+        var whiteList = mutable.SortedSet[String]()
+
+        for (rel <- relationshipTuples) {
+          if (rel.get("type").get == expand) {
+            whiteList += rel.get("target").get
+            whiteList += rel.get("source").get
+            newRels.+=(rel)
+          }
+        }
+
+        for (node <- nodeMap) {
+          if (whiteList.contains(node.get("id").get.toString)) {
+            newNodes.+=(node)
+          }
+        }
+
+        val relStr = compact(render(decompose(newRels)))
+        val nodeStr = compact(render(decompose(newNodes)))
+
+        s"""{"nodes": $nodeStr, "links": $relStr}"""
+      }
+    }
+
+  }
 
   def getFullGraph(architect_id: String, degrees: String): String = {
     //create new neo4j session
@@ -100,11 +211,9 @@ object APISource extends HttpApp {
         relMap.+=("target" -> cleanEnd.toString)
         relMap.+=("id" -> ("" + cleanStart.toString + relation.`type`.toString + cleanEnd.toString))
 
-        val filterType = "AKA"
-        if (relation.`type`.toString != filterType){
-          relationshipTuples.+=(relMap.toMap)
+        relationshipTuples.+=(relMap.toMap)
 
-        }
+
       }
 
     }
@@ -114,11 +223,15 @@ object APISource extends HttpApp {
     var nodeMap = new ListBuffer[Map[String, AnyRef]]
     for (arch_id <- idMap.values.toList) {
       var nd = mutable.Map() ++ getNodeInfo(arch_id.toString)
-      val linksCount = linksMap.get(nd.get("id").get.toString).get.toString
-      nd.+=("linksCount" -> linksCount)
-      if (linksCount != "0") {
-        nodeMap.+=(nd.toMap)
+      var linksCountMap = mutable.Map() ++ linksMap.get(nd.get("id").get.toString).get
+      var total = 0
+      for (tp <- linksCountMap.keys) {
+        var count = linksCountMap.get(tp).get
+        nd.+=(tp.toString + "_links" -> count.toString)
+        total += count
       }
+      nd.+=("total_links" -> total.toString)
+      nodeMap.+=(nd.toMap)
     }
 
     val relStr = compact(render(decompose(relationshipTuples)))
@@ -128,31 +241,48 @@ object APISource extends HttpApp {
 
   }
 
-  def getNeighborLinkCounts(architect_id: String, degrees: Int): Map[String, Int] = {
+  def getNeighborLinkCounts(architect_id: String, degrees: Int): Map[String, Map[String, Int]] = {
     //gets all relationships in a list of all nodes within x degrees
     val relList = getAllRelationships(architect_id, (degrees+1).toString)
 
-    var idToCountMap = mutable.Map[String, Int]()
+    var idToCountMap = mutable.Map[String, Map[String, Int]]()
     for (relMap <- relList) {
       var start: String = relMap.get("source").get
       var end: String = relMap.get("target").get
+      var tp: String = relMap.get("type").get
 
-      //FILTER OUT AKA LINKS
-      val filterType = "AKA"
       var adder = 1
-      if (relMap.get("type").get == filterType) adder = 0
 
-      if (idToCountMap.contains(start)) {
-        idToCountMap.update(start, idToCountMap.get(start).get + adder)
-      } else {
-        idToCountMap.+=(start -> adder)
+      for (rel_id <- List(start, end)) {
+        if (idToCountMap.contains(rel_id)) {
+          var linkMap = mutable.Map() ++ idToCountMap.get(rel_id).get
+          if (linkMap.contains(tp)) {
+            linkMap.update(tp, linkMap.get(tp).get + adder)
+          } else {
+            linkMap.+=(tp -> adder)
+          }
+          idToCountMap.update(rel_id, linkMap.toMap)
+        } else {
+          var linkMap = mutable.Map[String, Int]()
+          linkMap.+=(tp -> adder)
+          idToCountMap.+=(rel_id -> linkMap.toMap)
+        }
       }
 
-      if (idToCountMap.contains(end)) {
-        idToCountMap.update(end, idToCountMap.get(end).get + adder)
-      } else {
-        idToCountMap.+=(end -> adder)
-      }
+//      if (idToCountMap.contains(start)) {
+//        var linkMap = idToCountMap.get(start).get
+//        if (linkMap.contains(tp)) linkMap.update(tp, linkMap.get(tp).get + adder)
+//        else linkMap.+=(tp -> adder)
+//        idToCountMap.update(start, linkMap)
+//      } else {
+//        idToCountMap.+=(start -> adder)
+//      }
+//
+//      if (idToCountMap.contains(end)) {
+//        idToCountMap.update(end, idToCountMap.get(end).get + adder)
+//      } else {
+//        idToCountMap.+=(end -> adder)
+//      }
     }
 
     idToCountMap.toMap
