@@ -120,12 +120,14 @@ object APISource extends HttpApp {
       var nd = mutable.Map() ++ getNodeInfo(arch_id.toString)
       var linksCountMap = mutable.Map() ++ linksMap.get(nd.get("id").get.toString).get
       var total = 0
+      var microLinksMap = mutable.Map[String, String]()
       for (tp <- linksCountMap.keys) {
         var count = linksCountMap.get(tp).get
-        nd.+=(tp.toString + "_links" -> count.toString)
+        microLinksMap.+=(tp.toString -> count.toString)
         total += count
       }
-      nd.+=("total_links" -> total.toString)
+      microLinksMap.+=("total" -> total.toString)
+      nd.+=("linksCount" -> microLinksMap)
       nodeMap.+=(nd.toMap)
     }
 
@@ -225,12 +227,14 @@ object APISource extends HttpApp {
       var nd = mutable.Map() ++ getNodeInfo(arch_id.toString)
       var linksCountMap = mutable.Map() ++ linksMap.get(nd.get("id").get.toString).get
       var total = 0
+      var microLinksMap = mutable.Map[String, String]()
       for (tp <- linksCountMap.keys) {
         var count = linksCountMap.get(tp).get
-        nd.+=(tp.toString + "_links" -> count.toString)
+        microLinksMap.+=(tp.toString -> count.toString)
         total += count
       }
-      nd.+=("total_links" -> total.toString)
+      microLinksMap.+=("total" -> total.toString)
+      nd.+=("linksCount" -> microLinksMap)
       nodeMap.+=(nd.toMap)
     }
 
