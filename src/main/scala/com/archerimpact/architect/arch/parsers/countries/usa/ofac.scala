@@ -126,14 +126,20 @@ class ofac extends JSONParser {
   def getPartialGraph(listing: JValue): PartialGraph = {
 
     /* Extract fields */
-    val id = (listing \ "fixed_ref").extract[String]
-    val name = getName(listing)
-    val subtype = (listing \ "party_sub_type").extract[String]
+    val id: String = (listing \ "fixed_ref").extract[String]
+    val name: String = getName(listing)
+    val dateOfBirth: String = (listing \\ "Birthdate" \ "date").extractOpt[String].getOrElse("").stripPrefix(" ")
+    val placeOfBirth: String = (listing \\ "Place of Birth" \ "details").extractOpt[String].getOrElse("")
+    val titles: Seq[String] = (listing \\ "Title").children.
+      map(title => (title \ "details").extractOpt[String].getOrElse(""))
+    val emailAddresses: Seq[String] = (listing \\ "Email Address").children.
+      map(email => (email \ "details").extractOpt[String].getOrElse(""))
+    val subtype: String = (listing \ "party_sub_type").extract[String]
 
     /* Determine entity type */
     val proto = (subtype: @unchecked) match {
       case "Entity"     => organization(name)
-      case "Individual" => person(name)
+      case "Individual" => person(name, dateOfBirth, placeOfBirth, titles, emailAddresses)
       case "Vessel"     => vessel(name)
       case "Aircraft"   => aircraft(name)
     }
