@@ -17,10 +17,10 @@ class ep_votes_trim extends JSONParser {
   def getTitle(jv: JValue): String = compact(render(jv \ "title"))
 
   /* Utility function to extract links */
-  def getVotes(id: String, jv: JValue, predicate: String): List[Link] = jv match {
-    case JArray(List()) => List[Link]()
+  def getVotes(id: String, jv: JValue, predicate: String): PartialGraph = jv match {
+    case JArray(List()) => PartialGraph()
     case JArray(groups) =>
-      for {
+      val links = for {
         group <- groups.children
         votes = group \ "votes"
         vote <- votes.children
@@ -31,13 +31,8 @@ class ep_votes_trim extends JSONParser {
           objId = id
         )
       }
-  }
-
-  /* Utility function to transform predicate names */
-  def convertPredicate(predicate: String): String = predicate match {
-    case `predicate` if predicate.contains("For") => "VOTED_FOR"
-    case `predicate` if predicate.contains("Against") => "VOTED_AGAINST"
-    case `predicate` if predicate.contains("Abstain") => "ABSTAINED_ON"
+      val entities = links.map(link => Entity(link.subjId, person(link.subjId)))
+      PartialGraph(entities, links)
   }
 
   def getPartialGraph(listing: JValue): PartialGraph = {
@@ -49,11 +44,12 @@ class ep_votes_trim extends JSONParser {
     val proto = vote(title)
 
     /* Generate partial graph */
-    val `entities` = Entity(id, proto)
+    val `entities` = PartialGraph(List(Entity(id, proto)), List[Link]())
     val `for` = getVotes(id, listing \ "For" \ "groups", "VOTED_FOR")
     val `against` = getVotes(id, listing \ "Against" \ "groups", "VOTED_AGAINST")
     val `abstain` = getVotes(id, listing \ "Abstain" \ "groups", "ABSTAINED_ON")
-    PartialGraph(List(`entities`), `for` ::: `against` ::: `abstain`)
+    val partialGraphs = List(`entities`, `for`, `against`, `abstain`)
+    partialGraphs.foldLeft(PartialGraph())(merge)
   }
 
   def merge(a: PartialGraph, b: PartialGraph): PartialGraph =
