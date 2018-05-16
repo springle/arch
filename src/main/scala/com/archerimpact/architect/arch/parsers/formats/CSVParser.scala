@@ -10,6 +10,7 @@ import scala.collection.JavaConverters._
 
 abstract class CSVParser extends Parser {
 
+  def source: String
   def mkEntity(params: String *): Option[Entity]
   def mkLink(entities: List[Entity], params: String *): Option[Link]
 
@@ -38,7 +39,7 @@ abstract class CSVParser extends Parser {
       link <- mkLink(entities.toList, row: _*)
     } yield link
 
-    GraphShipment(entities.toList, links.toList, url)
+    GraphShipment(entities.toList, links.toList, url, source)
   }
 
 }

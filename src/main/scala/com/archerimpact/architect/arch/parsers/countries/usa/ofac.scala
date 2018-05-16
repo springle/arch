@@ -12,12 +12,10 @@ case class PartialGraph(entities: List[Entity] = List[Entity](), links: List[Lin
 
 class ofac extends JSONParser {
 
+  val source = "OFAC SDN List"
+
   implicit val formats: DefaultFormats.type = DefaultFormats
   private val inputDateFormat = new SimpleDateFormat("yyyy-mm-dd")
-  private val outputDateFormat = new SimpleDateFormat("yyyy-mm-dd")
-
-  /* Utility function to extract name */
-  def getName(jv: JValue): String = (jv \ "identity" \ "primary" \ "display_name").extract[String]
 
   /* Utility function to transform predicate names */
   def convertPredicate(predicate: String): String = predicate match {
@@ -66,7 +64,7 @@ class ofac extends JSONParser {
         val description = entryEvent(1).extract[String]
         Entity(s"${inputDateFormat.format(date)}/$description", event(
           description = description,
-          date = outputDateFormat.format(date),
+          date = inputDateFormat.format(date),
           category = event.Category.SANCTION,
           group = program
         ))
@@ -127,19 +125,21 @@ class ofac extends JSONParser {
 
     /* Extract fields */
     val id: String = (listing \ "fixed_ref").extract[String]
-    val name: String = getName(listing)
+    val name: String = (listing \ "identity" \ "primary" \ "display_name").extract[String]
     val dateOfBirth: String = (listing \\ "Birthdate" \ "date").extractOpt[String].getOrElse("").stripPrefix(" ")
     val placeOfBirth: String = (listing \\ "Place of Birth" \ "details").extractOpt[String].getOrElse("")
     val titles: Seq[String] = (listing \\ "Title").children.
       map(title => (title \ "details").extractOpt[String].getOrElse(""))
     val emailAddresses: Seq[String] = (listing \\ "Email Address").children.
       map(email => (email \ "details").extractOpt[String].getOrElse(""))
+    val websites: Seq[String] = (listing \\ "Website").children.
+      map(website => (website \ "details").extractOpt[String].getOrElse(""))
     val subtype: String = (listing \ "party_sub_type").extract[String]
 
     /* Determine entity type */
     val proto = (subtype: @unchecked) match {
-      case "Entity"     => organization(name)
-      case "Individual" => person(name, dateOfBirth, placeOfBirth, titles, emailAddresses)
+      case "Entity"     => organization(name, emailAddresses, websites)
+      case "Individual" => person(name, dateOfBirth, placeOfBirth, titles, emailAddresses, websites)
       case "Vessel"     => vessel(name)
       case "Aircraft"   => aircraft(name)
     }
@@ -183,6 +183,6 @@ class ofac extends JSONParser {
 
     /* Merge into a single graph to return */
     val mergedGraph = partialGraphs.foldLeft(PartialGraph())(merge)
-    GraphShipment(mergedGraph.entities, mergedGraph.links, url)
+    GraphShipment(mergedGraph.entities, mergedGraph.links, url, source)
   }
 }
