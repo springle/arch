@@ -21,6 +21,7 @@ class OfacSpec extends FlatSpec with Matchers {
         case "aircraft"            => group._2.size should be (118)
         case "person"              => group._2.size should be (10270)
         case "identifyingDocument" => group._2.size should be (4521)
+        case "address"             => group._2.size should be (8512)
         case _                     => None
       })
   }

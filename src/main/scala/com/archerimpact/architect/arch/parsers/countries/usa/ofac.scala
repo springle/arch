@@ -42,7 +42,7 @@ class ofac extends JSONParser {
   /* Utility function to extract locations */
   def getLocations(jv: JValue): List[Entity] = jv match {
     case JArray(locations) =>
-      for (location <- locations.children) yield {
+      (for (location <- locations.children) yield {
         val line1 = (location \\ "ADDRESS1").extractOpt[String].getOrElse("")
         val line2 = (location \\ "ADDRESS2").extractOpt[String].getOrElse("")
         val line3 = (location \\ "ADDRESS3").extractOpt[String].getOrElse("")
@@ -52,7 +52,7 @@ class ofac extends JSONParser {
         val country = (location \\ "COUNTRY").extractOpt[String].getOrElse("")
         val combined = List(line1, line2, line3, city, region, zipCode, country).mkString(",")
         Entity(combined, address(combined, line1, line2, line3, city, region, zipCode, country))
-      }
+      }).filter(location => location.proto.getFieldByNumber(1).toString.replace(",","") != "")
     case _ => List[Entity]()
   }
 
@@ -150,7 +150,7 @@ class ofac extends JSONParser {
     val sanctionEvents = getSanctionEvents(listing \\ "sanctions_entries")
     val sanctionLinks = sanctionEvents.map(sanctionEvent => Link(id, "SANCTIONED_ON", sanctionEvent.id))
 
-    /* Extract locations */
+    /* Extract locations (filter out empties) */
     val locations = getLocations(listing \\ "Location")
     val locationLinks = locations.map(location => Link(id, "HAS_KNOWN_LOCATION", location.id))
 
