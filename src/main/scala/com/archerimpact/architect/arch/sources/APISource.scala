@@ -126,8 +126,8 @@ object APISource extends HttpApp {
         microLinksMap.+=(tp.toString -> count.toString)
         total += count
       }
-      microLinksMap.+=("total" -> total.toString)
-      nd.+=("linksCount" -> microLinksMap)
+      nd.+=("linkTypes" -> microLinksMap)
+      nd.+=("totalLinks" -> total.toString)
       nodeMap.+=(nd.toMap)
     }
 
@@ -233,8 +233,8 @@ object APISource extends HttpApp {
         microLinksMap.+=(tp.toString -> count.toString)
         total += count
       }
-      microLinksMap.+=("total" -> total.toString)
-      nd.+=("linksCount" -> microLinksMap)
+      nd.+=("linkTypes" -> microLinksMap)
+      nd.+=("totalLinks" -> total.toString)
       nodeMap.+=(nd.toMap)
     }
 
