@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package architect;
+
+import "scalapb/scalapb.proto";
+
+option (scalapb.options) = {
+    package_name: "com.archerimpact.architect.ontology"
+    flat_package: true
+};
+
+message vote {
+    string title = 1;
+    string time = 2;
+    enum Result {
+    	PASSED = 0;
+		FAILED = 1;
+    }
+    Result result = 3;
+    enum Type {
+    	DATA = 0;
+    	AGRICULTURE = 1;
+    	IMMIGRATION = 2;
+    	TYPE_ETC = 3;
+    }
+    Type type = 4;
+    int32 for = 5;
+    int32 against = 6;
+    int32 abstain = 7;
+    enum Jurisdiction {
+        USA = 0;
+        GBR = 1;
+        EP = 2;
+        EC = 3;
+        JURIS_ETC = 4;
+    }
+    Jurisdiction jurisdiction = 8;
+}
