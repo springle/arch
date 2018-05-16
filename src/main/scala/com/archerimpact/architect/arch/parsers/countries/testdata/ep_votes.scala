@@ -71,9 +71,9 @@ class epVotes extends JSONParser {
 
     /* Generate partial graph */
     val `entities` = Entity(id, proto)
-    val `for` = getFor(id, listing \ "For")
-    val `against` = getAgainst(id, listing \ "Against")
-    val `abstain` = getAbstain(id, listing \ "Abstain")
+    val `for` = getFor(id, listing \ "For" \ "groups")
+    val `against` = getAgainst(id, listing \ "Against" \ "groups")
+    val `abstain` = getAbstain(id, listing \ "Abstain" \ "groups")
     PartialGraph(List(`entities`), `for` ::: `against` ::: `abstain`)
   }
 

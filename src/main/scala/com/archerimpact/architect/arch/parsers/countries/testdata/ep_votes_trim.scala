@@ -11,47 +11,26 @@ case class PartialGraph(entities: List[Entity] = List[Entity](), links: List[Lin
 
 class ep_votes_trim extends JSONParser {
 
+  implicit val formats: DefaultFormats.type = DefaultFormats
+
   /* Utility function to extract title */
   def getTitle(jv: JValue): String = compact(render(jv \ "title"))
 
   /* Utility function to extract links */
-  def getFor(id: String, jv: JValue): List[Link] = jv match {
+  def getVotes(id: String, jv: JValue, predicate: String): List[Link] = jv match {
     case JArray(List()) => List[Link]()
-    case JArray(links) =>
-      links.
-        children.
-        map(link =>
-          Link(
-            subjId = compact(render(link \ "groups" \ "votes" \ "orig")),
-            predicate = "VOTED_FOR",
-            objId = id)
-          )
-  }
-
-  def getAgainst(id: String, jv: JValue): List[Link] = jv match {
-    case JArray(List()) => List[Link]()
-    case JArray(links) =>
-      links.
-        children.
-        map(link =>
-          Link(
-            subjId = compact(render(link \ "groups" \ "votes" \ "orig")),
-            predicate = "VOTED_AGAINST",
-            objId = id)
-          )
-  }
-
-  def getAbstain(id: String, jv: JValue): List[Link] = jv match {
-    case JArray(List()) => List[Link]()
-    case JArray(links) =>
-      links.
-        children.
-        map(link =>
-          Link(
-            subjId = compact(render(link \ "groups" \ "votes" \ "orig")),
-            predicate = "ABSTAINED_ON",
-            objId = id)
-          )
+    case JArray(groups) =>
+      for {
+        group <- groups.children
+        votes = group \ "votes"
+        vote <- votes.children
+      } yield {
+        Link(
+          subjId = (vote \ "orig").extract[String],
+          predicate = predicate,
+          objId = id
+        )
+      }
   }
 
   /* Utility function to transform predicate names */
@@ -71,9 +50,9 @@ class ep_votes_trim extends JSONParser {
 
     /* Generate partial graph */
     val `entities` = Entity(id, proto)
-    val `for` = getFor(id, listing \ "For")
-    val `against` = getAgainst(id, listing \ "Against")
-    val `abstain` = getAbstain(id, listing \ "Abstain")
+    val `for` = getVotes(id, listing \ "For" \ "groups", "VOTED_FOR")
+    val `against` = getVotes(id, listing \ "Against" \ "groups", "VOTED_AGAINST")
+    val `abstain` = getVotes(id, listing \ "Abstain" \ "groups", "ABSTAINED_ON")
     PartialGraph(List(`entities`), `for` ::: `against` ::: `abstain`)
   }
 
