@@ -28,7 +28,7 @@ object APISource extends HttpApp {
   implicit val formats: DefaultFormats.type = DefaultFormats
 
   override def routes: Route =
-    parameters("id", "degrees", "expandby", "exclude") { (architect_id, degrees, expand, exclude) =>
+    parameters("id", "degrees", "expandby", "exclude", "attr", "attrVal") { (architect_id, degrees, expand, exclude, attr, attrVal) =>
 
       //TODO: secure shit, validate architect id and degrees
 
@@ -45,7 +45,7 @@ object APISource extends HttpApp {
             complete(HttpEntity(ContentTypes.`application/json`, "" + singleNodeInfo))
           }
         } case "1" => {
-          val graphJSON = getExpand(architect_id, expand, exclude)
+          val graphJSON = getExpand(architect_id, expand, exclude, attr, attrVal)
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
             complete(HttpEntity(ContentTypes.`application/json`, "" + graphJSON))
           }
@@ -58,6 +58,38 @@ object APISource extends HttpApp {
       }
 
     }
+
+  def filterAttribute(data: graphDataCarrier, attrName: String, attrValue: String): graphDataCarrier = {
+    var nodes = data.nodes
+    var rels = data.rels
+
+    var newNodes = new ListBuffer[Map[String, AnyRef]]
+    var newRels = new ListBuffer[Map[String, String]]
+
+    var whiteList = mutable.SortedSet[String]()
+
+    for (nd <- nodes) {
+      var attr = "NOT_FOUND"
+      if (nd.contains(attrName)) {
+        attr = nd.get(attrName).get.toString
+      }
+
+      if (attr == attrValue || (attrName=="totalLinks" && attr.toInt >= attrValue.toInt)) {
+        whiteList.+=(nd.get("id").get.toString)
+        newNodes.+=(nd)
+      }
+    }
+
+    for (rel <- rels) {
+      var source = rel.get("source").get
+      var target = rel.get("target").get
+
+      if (whiteList.contains(source) && whiteList.contains(target)) newRels.+=(rel)
+    }
+
+    graphDataCarrier(newNodes, newRels)
+
+  }
 
   def filterUpGraph(data: graphDataCarrier, filterString: String): graphDataCarrier = {
     var nodes = data.nodes
@@ -130,7 +162,7 @@ object APISource extends HttpApp {
     graphDataCarrier(newNodes, newRels)
   }
 
-  def getExpand(architect_id: String, expand: String, exclude: String): String = {
+  def getExpand(architect_id: String, expand: String, exclude: String, attr: String, attrVal: String): String = {
     val degrees = 1
 
     var oldData = getGraphData(architect_id, degrees.toString)
@@ -142,7 +174,7 @@ object APISource extends HttpApp {
       ex = false
       filterString = expand
       newData = filterUpGraph(newData, filterString)
-    } else {
+    } else if (exclude != "*") {
       if (filterString.contains(",")) {
         var filterList = filterString.split(",")
         for (flt <- filterList) {
@@ -151,6 +183,9 @@ object APISource extends HttpApp {
       } else {
         newData = filterGraph(oldData, filterString, ex)
       }
+    }
+    if (attr != "*") {
+      newData = filterAttribute(newData, attr, attrVal)
     }
 
 
