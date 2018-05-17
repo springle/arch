@@ -116,6 +116,14 @@ class ofac extends JSONParser {
         )
   }
 
+  /* Utility function to extract details */
+  def getDetails(listing: JValue, target: String): List[String] =
+    for {
+      item <- (listing \\ target).children
+      details = (item \\ "details").extractOpt[String].getOrElse("")
+      if details != ""
+    } yield details
+
   /*
    *    Main function to run on each entry in the OFAC JSON.
    *    Returns a PartialGraph with a list of entities and a list of links.
@@ -126,14 +134,11 @@ class ofac extends JSONParser {
     /* Extract fields */
     val id: String = (listing \ "fixed_ref").extract[String]
     val name: String = (listing \ "identity" \ "primary" \ "display_name").extract[String]
-    val dateOfBirth: String = (listing \\ "Birthdate" \ "date").extractOpt[String].getOrElse("").stripPrefix(" ")
-    val placeOfBirth: String = (listing \\ "Place of Birth" \ "details").extractOpt[String].getOrElse("")
-    val titles: Seq[String] = (listing \\ "Title").children.
-      map(title => (title \ "details").extractOpt[String].getOrElse(""))
-    val emailAddresses: Seq[String] = (listing \\ "Email Address").children.
-      map(email => (email \ "details").extractOpt[String].getOrElse(""))
-    val websites: Seq[String] = (listing \\ "Website").children.
-      map(website => (website \ "details").extractOpt[String].getOrElse(""))
+    val dateOfBirth: List[String] = getDetails(listing, "Birthdate")
+    val placeOfBirth: List[String] = getDetails(listing, "Place of Birth")
+    val titles: List[String] = getDetails(listing, "Title")
+    val emailAddresses: List[String] = getDetails(listing, "Email Address")
+    val websites: List[String] = getDetails(listing, "Website")
     val subtype: String = (listing \ "party_sub_type").extract[String]
 
     /* Determine entity type */

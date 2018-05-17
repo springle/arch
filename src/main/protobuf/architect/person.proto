@@ -11,8 +11,8 @@ option (scalapb.options) = {
 
 message person {
     string name = 1;
-    string dateOfBirth = 2;  // yyyy-mm-dd
-    string placeOfBirth = 3;
+    repeated string dateOfBirth = 2;  // yyyy-mm-dd
+    repeated string placeOfBirth = 3;
     repeated string titles = 4;
     repeated string emailAddresses = 5;
     repeated string websites = 6;
