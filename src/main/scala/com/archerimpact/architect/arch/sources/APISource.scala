@@ -115,8 +115,20 @@ object APISource extends HttpApp {
     } else {
       newData = filterGraph(oldData, filterString, ex)
     }
-    val relStr = compact(render(decompose(newData.rels)))
-    val nodeStr = compact(render(decompose(newData.nodes)))
+
+    var endRels = newData.rels
+    var endNodes = newData.nodes
+
+    if (endRels.size == 0) {
+      var lb = new ListBuffer[Map[String, AnyRef]]()
+      var lonelyNode = mutable.Map() ++ getNodeInfo(architect_id.toString)
+      lonelyNode.+=("totalLinks" -> "0", "linkTypes" -> mutable.Map[String, String]())
+      lb.+=(lonelyNode.toMap)
+      endNodes = lb
+    }
+
+    val relStr = compact(render(decompose(endRels)))
+    val nodeStr = compact(render(decompose(endNodes)))
     s"""{"nodes": $nodeStr, "links": $relStr}"""
 
   }
@@ -131,6 +143,10 @@ object APISource extends HttpApp {
     var resp = neo4jSession.run(fullQuery)
     //extract info from neo4j records response
     var hN = resp.hasNext
+    if (!hN) {
+      //TODO: potentially add lonely nodes to list (if necessary)
+      return graphDataCarrier(new ListBuffer[Map[String, AnyRef]](), new ListBuffer[Map[String, String]]())
+    }
 
     var relationshipTuples = new ListBuffer[Map[String, String]]()
     var idMap = mutable.Map[String, String]()
