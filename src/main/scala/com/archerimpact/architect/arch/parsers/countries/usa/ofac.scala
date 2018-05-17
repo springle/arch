@@ -3,21 +3,17 @@ package com.archerimpact.architect.arch.parsers.countries.usa
 import java.text.SimpleDateFormat
 
 import com.archerimpact.architect.arch.parsers.formats.JSONParser
-import com.archerimpact.architect.arch.shipments.{Entity, GraphShipment, Link}
+import com.archerimpact.architect.arch.shipments.{Entity, GraphShipment, Link, PartialGraph}
 import com.archerimpact.architect.ontology._
 import org.json4s.JsonDSL._
 import org.json4s._
 
-case class PartialGraph(entities: List[Entity] = List[Entity](), links: List[Link] = List[Link]())
-
 class ofac extends JSONParser {
+
+  val source = "OFAC SDN List"
 
   implicit val formats: DefaultFormats.type = DefaultFormats
   private val inputDateFormat = new SimpleDateFormat("yyyy-mm-dd")
-  private val outputDateFormat = new SimpleDateFormat("yyyy-mm-dd")
-
-  /* Utility function to extract name */
-  def getName(jv: JValue): String = (jv \ "identity" \ "primary" \ "display_name").extract[String]
 
   /* Utility function to transform predicate names */
   def convertPredicate(predicate: String): String = predicate match {
@@ -66,7 +62,7 @@ class ofac extends JSONParser {
         val description = entryEvent(1).extract[String]
         Entity(s"${inputDateFormat.format(date)}/$description", event(
           description = description,
-          date = outputDateFormat.format(date),
+          date = inputDateFormat.format(date),
           category = event.Category.SANCTION,
           group = program
         ))
@@ -118,6 +114,14 @@ class ofac extends JSONParser {
         )
   }
 
+  /* Utility function to extract details */
+  def getDetails(listing: JValue, targetObject: String, targetDetails: String = "details"): List[String] =
+    for {
+      item <- (listing \\ targetObject).children
+      details = (item \\ targetDetails).extractOpt[String].getOrElse("")
+      if details != ""
+    } yield details
+
   /*
    *    Main function to run on each entry in the OFAC JSON.
    *    Returns a PartialGraph with a list of entities and a list of links.
@@ -126,14 +130,19 @@ class ofac extends JSONParser {
   def getPartialGraph(listing: JValue): PartialGraph = {
 
     /* Extract fields */
-    val id = (listing \ "fixed_ref").extract[String]
-    val name = getName(listing)
-    val subtype = (listing \ "party_sub_type").extract[String]
+    val id: String = (listing \ "fixed_ref").extract[String]
+    val name: String = (listing \ "identity" \ "primary" \ "display_name").extract[String]
+    val dateOfBirth: List[String] = getDetails(listing, "Birthdate", "date")
+    val placeOfBirth: List[String] = getDetails(listing, "Place of Birth")
+    val titles: List[String] = getDetails(listing, "Title")
+    val emailAddresses: List[String] = getDetails(listing, "Email Address")
+    val websites: List[String] = getDetails(listing, "Website")
+    val subtype: String = (listing \ "party_sub_type").extract[String]
 
     /* Determine entity type */
     val proto = (subtype: @unchecked) match {
-      case "Entity"     => organization(name)
-      case "Individual" => person(name)
+      case "Entity"     => organization(name, emailAddresses, websites)
+      case "Individual" => person(name, dateOfBirth, placeOfBirth, titles, emailAddresses, websites)
       case "Vessel"     => vessel(name)
       case "Aircraft"   => aircraft(name)
     }
@@ -166,17 +175,13 @@ class ofac extends JSONParser {
     PartialGraph(entities, links)
   }
 
-  /* Utility function to merge partial graphs */
-  def merge(a: PartialGraph, b: PartialGraph): PartialGraph =
-    a.copy(entities = a.entities ::: b.entities, links = a.links ::: b.links)
-
   override def jsonToGraph(data: JValue, url: String): GraphShipment = {
 
     /* Generate partial graph for each sanction listing */
     val partialGraphs = data.children.map(listing => getPartialGraph(listing))
 
     /* Merge into a single graph to return */
-    val mergedGraph = partialGraphs.foldLeft(PartialGraph())(merge)
-    GraphShipment(mergedGraph.entities, mergedGraph.links, url)
+    val mergedGraph = partialGraphs.foldLeft(PartialGraph())(PartialGraph.merge)
+    GraphShipment(mergedGraph.entities, mergedGraph.links, url, source)
   }
 }
