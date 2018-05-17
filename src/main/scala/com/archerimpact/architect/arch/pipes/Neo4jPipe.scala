@@ -16,16 +16,15 @@ class Neo4jPipe extends PipeSpec {
 
   /* Upload links to neo4j, grouped by predicate type */
   def uploadLinks(graph: GraphShipment, neo4jSession: Session): Unit = {
-    val idToType: Map[String, String] = graph.entities.map(entity => (entity.id, typeName(entity.proto))).toMap
     for (group <- graph.links.grouped(GROUP_SIZE)) {
       val tx: Transaction = neo4jSession.beginTransaction()
       for (link <- group)
         tx.run(
           s"""
-              MATCH (subject:${idToType(link.subjId)})
+              MATCH (subject)
               WHERE subject.architectId = '${link.subjId}'
               WITH subject
-              MATCH (object:${idToType(link.objId)})
+              MATCH (object)
               WHERE object.architectId = '${link.objId}'
               MERGE (subject)-[:${link.predicate}]->(object)
             """.stripMargin

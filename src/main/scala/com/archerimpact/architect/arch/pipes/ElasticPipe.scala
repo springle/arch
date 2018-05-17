@@ -19,7 +19,7 @@ class ElasticPipe extends PipeSpec {
     val elasticClient = newElasticClient()
     elasticClient.execute { createIndex (index) }.await
     val commands: Seq[BulkCompatibleDefinition] = for (entity <- graph.entities) yield {
-       indexInto(s"$index/${typeName(entity.proto)}") id entity.id doc compact(render(
+       update(entity.id) in s"$index/${typeName(entity.proto)}" docAsUpsert compact(render(
          JsonFormat.toJson(entity.proto) merge JObject(List("source" -> JString(graph.source)))
        ))
     }
