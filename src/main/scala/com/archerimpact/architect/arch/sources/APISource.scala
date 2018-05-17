@@ -166,7 +166,8 @@ object APISource extends HttpApp {
     var endRels = newData.rels
     var endNodes = newData.nodes
 
-    if (endRels.size == 0) {
+    //TODO: not sure if this is the right metric for this. totalCounts = 0
+    if (endNodes.size == 0) {
       var lb = new ListBuffer[Map[String, AnyRef]]()
       var lonelyNode = mutable.Map() ++ getNodeInfo(architect_id.toString)
       lonelyNode.+=("totalLinks" -> "0", "linkTypes" -> mutable.Map[String, String]())
