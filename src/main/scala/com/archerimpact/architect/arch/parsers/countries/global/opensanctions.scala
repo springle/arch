@@ -7,10 +7,49 @@ import com.archerimpact.architect.ontology._
 class opensanctions extends CSVParser {
   val source = "Open Sanctions"
 
-  def addressesGraph(params: String*): PartialGraph = PartialGraph()
-  def aliasesGraph(params: String*): PartialGraph = PartialGraph()
   def birthDatesGraph(params: String*): PartialGraph = PartialGraph()
+
+  def addressesGraph(params: String*): PartialGraph = params match {
+    case Seq(
+      city, id, lastSeen,
+      text, region, note,
+      street, postalCode, countryCode,
+      countryName, street2, firstSeen
+    ) =>
+      val combined = List(street, street2, "", city, region, postalCode, countryName).mkString(",")
+      val entity = Entity(combined, address(
+        combined, street, street2,
+        "", city, region,
+        postalCode, countryName
+      ))
+      val link = Link(id, "HAS_KNOWN_LOCATION", combined)
+      PartialGraph(List(entity), List(link))
+  }
+
   def nationalitiesGraph(params: String*): PartialGraph = PartialGraph()
+    /* TODO: investigate neo4j overwriting
+    params match {
+      case Seq(
+        countryName: String, id: String, countryCode,
+        lastSeen, firstSeen
+      ) =>
+        val entity = Entity(id, person(nationality=countryName))
+        PartialGraph(List(entity), List[Link]())
+    }
+    */
+
+  def aliasesGraph(params: String*): PartialGraph = params match {
+    case Seq(
+      firstName, lastName, description,
+      quality, title, thirdName,
+      lastSeen, id, fatherName,
+      entityType, secondName, name,
+      firstSeen
+    ) =>
+      val entity = Entity(s"$id/aka/$name", person(name, notes = "This entity might be an organization."))
+      val link = Link(id, "AKA", s"$id/aka/$name")
+      PartialGraph(List(entity), List(link))
+  }
 
   def identifiersGraph(params: String*): PartialGraph = params match {
     case Seq(
@@ -18,7 +57,10 @@ class opensanctions extends CSVParser {
       number, countryName, countryCode,
       issuedAt, entityType, firstSeen
     ) =>
-      val proto = identifyingDocument(number, entityType, countryName, countryName)
+      val proto = identifyingDocument(
+        number, entityType, countryName,
+        countryName, issuedOn=issuedAt, notes=description
+      )
       val idDoc = Entity(s"$id/idDoc/$number", proto)
       val entities = List(idDoc)
       val link = Link(id, "HAS_ID_DOC", s"$id/idDoc/$number")
@@ -36,13 +78,18 @@ class opensanctions extends CSVParser {
       gender, summary, secondName,
       firstSeen
       ) =>
-        val proto = entityType match {
-          case "individual" => person(name)
-          case "entity" => organization(name)
-        }
-        val entity = Entity(id, proto)
-        val entities = List(entity)
-        val links = List[Link]()
+        val mainEntity = Entity(id, entityType match {
+          case "individual" => person(name=name, titles=List(title), notes=summary)
+          case "entity" => organization(name=name, notes=summary)
+        })
+        val combinedName = List(firstName, secondName, thirdName).mkString(",")
+        val akaEntity = Entity(s"$id/aka", entityType match {
+          case "individual" => person(combinedName)
+          case "entity" => organization(combinedName)
+        })
+        val akaLink = Link(id, "AKA", s"$id/aka")
+        val entities = List(mainEntity, akaEntity)
+        val links = List(akaLink)
         PartialGraph(entities, links)
   }
 

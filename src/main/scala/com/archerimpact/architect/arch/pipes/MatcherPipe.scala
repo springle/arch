@@ -11,7 +11,7 @@ class MatcherPipe extends PipeSpec {
 
   private val index = scala.util.Properties.envOrElse("ELASTIC_INDEX", "entities")
 
-  val matchable = Map("number" -> 0)
+  val matchable = Map("number" -> 0, "name" -> 0)
 
   def uploadAndLogLink(subj: String, pred: String, obj: String): Unit = {
     println(s"($subj)-[:$pred]-($obj)")
@@ -38,13 +38,11 @@ class MatcherPipe extends PipeSpec {
       entity <- graph.entities
       (fieldName, fieldValue) <- protoParams(entity.proto)
       if matchable.contains(fieldName)
-      q = if (matchable(fieldName) > 0) fuzzyQuery(fieldName, fieldValue.toString)
-      else termQuery(fieldName, fieldValue.toString)
       response <- elasticClient.execute(
-        search(s"$index/${typeName(entity.proto)}") query q
+        search(s"$index/${typeName(entity.proto)}") query termQuery(fieldName, fieldValue.toString)
       ).await
       hit <- response.result.hits.hits if hit.id != entity.id
-    } uploadAndLogLink(entity.id, s"possibly_same_$fieldName".toUpperCase, hit.id)
+    } uploadAndLogLink(entity.id, s"substring_matches_$fieldName".toUpperCase, hit.id)
   }
 
   override def flow(input: GraphShipment): GraphShipment = {
