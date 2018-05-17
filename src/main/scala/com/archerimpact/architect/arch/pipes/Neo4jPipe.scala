@@ -65,8 +65,8 @@ class Neo4jPipe extends PipeSpec {
 
   override def flow(input: GraphShipment): GraphShipment = {
     val neo4jSession = newNeo4jSession()
-    uploadEntities(input, neo4jSession); println("uploaded entities")
     createIndices(input, neo4jSession); println("created indices")
+    uploadEntities(input, neo4jSession); println("uploaded entities")
     uploadLinks(input, neo4jSession); println("uploaded links")
     neo4jSession.close()
     input

@@ -25,7 +25,7 @@ abstract class CSVParser extends Parser {
     val partialGraphs = for {
       row <- parser.parseAll(reader).asScala.tail
     } yield mkGraph(url, row: _*)
-    PartialGraph.mergePartialGraphs(partialGraphs.toList, url, source)
+    PartialGraph.mergePartialGraphs(partialGraphs.toList, url.split("/").dropRight(1).mkString("/"), source)
   }
 
 }
