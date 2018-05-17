@@ -113,69 +113,11 @@ object APISource extends HttpApp {
         newData = filterGraph(newData, flt, ex)
       }
     } else {
-      var newData = filterGraph(oldData, filterString, ex)
+      newData = filterGraph(oldData, filterString, ex)
     }
     val relStr = compact(render(decompose(newData.rels)))
     val nodeStr = compact(render(decompose(newData.nodes)))
     s"""{"nodes": $nodeStr, "links": $relStr}"""
-
-
-//    if (exclude != "*") {
-//      var newNodes = new ListBuffer[Map[String, AnyRef]]
-//      var newRels = new ListBuffer[Map[String, String]]
-//
-//      var whiteList = mutable.SortedSet[String]()
-//
-//      for (rel <- relationshipTuples) {
-//        if (rel.get("type").get != exclude) {
-//          whiteList += rel.get("target").get
-//          whiteList += rel.get("source").get
-//          newRels.+=(rel)
-//        }
-//      }
-//
-//      for (node <- nodeMap) {
-//        if (whiteList.contains(node.get("id").get.toString)) {
-//          newNodes.+=(node)
-//        }
-//      }
-//
-//      nodeMap = newNodes
-//      relationshipTuples = newRels
-//    }
-//
-//    expand match {
-//      case "*" => {
-//        val relStr = compact(render(decompose(relationshipTuples)))
-//        val nodeStr = compact(render(decompose(nodeMap)))
-//
-//        s"""{"nodes": $nodeStr, "links": $relStr}"""
-//      } case _ => {
-//        var newNodes = new ListBuffer[Map[String, AnyRef]]
-//        var newRels = new ListBuffer[Map[String, String]]
-//
-//        var whiteList = mutable.SortedSet[String]()
-//
-//        for (rel <- relationshipTuples) {
-//          if (rel.get("type").get == expand) {
-//            whiteList += rel.get("target").get
-//            whiteList += rel.get("source").get
-//            newRels.+=(rel)
-//          }
-//        }
-//
-//        for (node <- nodeMap) {
-//          if (whiteList.contains(node.get("id").get.toString)) {
-//            newNodes.+=(node)
-//          }
-//        }
-//
-//        val relStr = compact(render(decompose(newRels)))
-//        val nodeStr = compact(render(decompose(newNodes)))
-//
-//        s"""{"nodes": $nodeStr, "links": $relStr}"""
-//      }
-//    }
 
   }
 
