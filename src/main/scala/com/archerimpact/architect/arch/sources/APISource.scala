@@ -59,6 +59,42 @@ object APISource extends HttpApp {
 
     }
 
+  def filterUpGraph(data: graphDataCarrier, filterString: String): graphDataCarrier = {
+    var nodes = data.nodes
+    var rels = data.rels
+
+    var newNodes = new ListBuffer[Map[String, AnyRef]]
+    var newRels = new ListBuffer[Map[String, String]]
+
+    var whiteList = mutable.SortedSet[String]()
+
+    for (rel <- rels) {
+
+      var tp: String = rel.get("type").get
+
+      var decider = true
+      if (filterString.contains(",")){
+        var filters = filterString.split(",")
+        decider = filters.contains(tp)
+      } else {
+        decider = tp == filterString
+      }
+
+      if (decider) {
+        whiteList += rel.get("target").get
+        whiteList += rel.get("source").get
+        newRels.+=(rel)
+      }
+    }
+
+    for (node <- nodes) {
+      if (whiteList.contains(node.get("id").get.toString)) {
+        newNodes.+=(node)
+      }
+    }
+
+    graphDataCarrier(newNodes, newRels)
+  }
 
   def filterGraph(data: graphDataCarrier, filterString: String, exclude: Boolean): graphDataCarrier = {
     var nodes = data.nodes
@@ -99,22 +135,33 @@ object APISource extends HttpApp {
 
     var oldData = getGraphData(architect_id, degrees.toString)
 
+    var newData = oldData
     var ex = true
     var filterString = exclude
     if (expand != "*") {
       ex = false
       filterString = expand
+      newData = filterUpGraph(newData, filterString)
+    } else {
+      if (filterString.contains(",")) {
+        var filterList = filterString.split(",")
+        for (flt <- filterList) {
+          newData = filterGraph(newData, flt, ex)
+        }
+      } else {
+        newData = filterGraph(oldData, filterString, ex)
+      }
     }
 
-    var newData = oldData
-    if (filterString.contains(",")) {
-      var filterList = filterString.split(",")
-      for (flt <- filterList) {
-        newData = filterGraph(newData, flt, ex)
-      }
-    } else {
-      newData = filterGraph(oldData, filterString, ex)
-    }
+
+//    if (filterString.contains(",")) {
+//      var filterList = filterString.split(",")
+//      for (flt <- filterList) {
+//        newData = filterGraph(newData, flt, ex)
+//      }
+//    } else {
+//      newData = filterGraph(oldData, filterString, ex)
+//    }
 
     var endRels = newData.rels
     var endNodes = newData.nodes
