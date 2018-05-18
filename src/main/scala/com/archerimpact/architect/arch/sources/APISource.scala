@@ -496,6 +496,8 @@ object APISource extends HttpApp {
       }
     }
 
+    elasticClient.close()
+
 
   }
 
