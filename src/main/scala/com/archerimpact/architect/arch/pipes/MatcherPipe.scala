@@ -47,7 +47,7 @@ class MatcherPipe extends PipeSpec {
       ).await
       hit <- response.result.hits.hits
       if hit.id != entity.id
-      if hit.sourceAsMap.getOrElse("dataset", "") != graph.source
+      if hit.sourceAsMap.getOrElse("dataset", "") != graph.source  // TODO: re-enable in-source matching
     } uploadAndLogLink(entity.id, s"MATCHED_$fieldName".toUpperCase, hit.id)
   }
 

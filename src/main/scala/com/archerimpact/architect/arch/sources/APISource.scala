@@ -37,7 +37,7 @@ object APISource extends HttpApp {
       degrees match {
         case "0" => {
           var lb = new ListBuffer[Map[String, AnyRef]]()
-          lb.+=(getNodeInfo(architect_id.toString))
+          lb.+=(getNodeInfo(architect_id))
           val jsonData: String = compact(render(decompose(lb)))
           var singleNodeInfo: String = s"""{"nodes" : $jsonData, "links": []}"""
 
@@ -287,6 +287,7 @@ object APISource extends HttpApp {
     }
 
     graphDataCarrier(nodeMap, relationshipTuples)
+    neo4jSession.close()
   }
 
   def getFullGraph(architect_id: String, degrees: String): String = {
@@ -340,6 +341,8 @@ object APISource extends HttpApp {
 
 
       }
+
+      neo4jSession.close()
 
     }
 
