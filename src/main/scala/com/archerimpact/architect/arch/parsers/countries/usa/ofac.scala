@@ -38,7 +38,7 @@ class ofac extends JSONParser {
   /* Utility function to extract locations */
   def getLocations(jv: JValue): List[Entity] = jv match {
     case JArray(locations) =>
-      (for (location <- locations.children) yield {
+      val addresses = for (location <- locations.children) yield {
         val line1 = (location \\ "ADDRESS1").extractOpt[String].getOrElse("")
         val line2 = (location \\ "ADDRESS2").extractOpt[String].getOrElse("")
         val line3 = (location \\ "ADDRESS3").extractOpt[String].getOrElse("")
@@ -46,25 +46,33 @@ class ofac extends JSONParser {
         val region = (location \\ "STATE/PROVINCE").extractOpt[String].getOrElse("")
         val zipCode = (location \\ "POSTAL CODE").extractOpt[String].getOrElse("")
         val country = (location \\ "COUNTRY").extractOpt[String].getOrElse("")
-        val combined = List(line1, line2, line3, city, region, zipCode, country).mkString(",")
+        val combined = List(line1, line2, line3, city, region, zipCode, country).
+          filter(s => s != "").
+          map(s => s.stripPrefix(" ")).
+          mkString(", ")
         Entity(combined, address(combined, line1, line2, line3, city, region, zipCode, country))
-      }).filter(location => location.proto.getFieldByNumber(1).toString.replace(",","") != "")
+      }
+      addresses.
+        filter(address => Option(address.proto.getFieldByNumber(1)).
+          getOrElse("").
+          toString.
+          count(c => c == ',') > 1)  // filter out non-specific addresses
     case _ => List[Entity]()
   }
 
   /* Utility function to extract sanction events */
   def getSanctionEvents(jv: JValue): List[Entity] = jv match {
     case JArray(sanctionEntries) =>
-      for (sanctionEntry <- sanctionEntries.children) yield {
-        val program = (sanctionEntry \\ "program")(0).extract[String]
-        val entryEvent = (sanctionEntry \\ "entry_events")(0)
+      for {
+        sanctionEntry <- sanctionEntries.children
+        entryEvent <- (sanctionEntry \ "entry_events").children
+      } yield {
         val date = inputDateFormat.parse(entryEvent(0).extract[String])
         val description = entryEvent(1).extract[String]
         Entity(s"${inputDateFormat.format(date)}/$description", event(
           description = description,
           date = inputDateFormat.format(date),
-          category = event.Category.SANCTION,
-          group = program
+          category = event.Category.SANCTION
         ))
       }
     case _ => List[Entity]()

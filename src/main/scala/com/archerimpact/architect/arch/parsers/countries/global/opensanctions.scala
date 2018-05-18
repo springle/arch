@@ -7,7 +7,8 @@ import com.archerimpact.architect.ontology._
 class opensanctions extends CSVParser {
   val source = "Open Sanctions"
 
-  def birthDatesGraph(params: String*): PartialGraph = PartialGraph()
+  def birthDatesGraph(params: String*): PartialGraph = PartialGraph()  // TODO: integrate without overwriting
+  def nationalitiesGraph(params: String*): PartialGraph = PartialGraph()  // TODO: integrate without overwriting
 
   def addressesGraph(params: String*): PartialGraph = params match {
     case Seq(
@@ -16,27 +17,21 @@ class opensanctions extends CSVParser {
       street, postalCode, countryCode,
       countryName, street2, firstSeen
     ) =>
-      val combined = List(street, street2, "", city, region, postalCode, countryName).mkString(",")
-      val entity = Entity(combined, address(
-        combined, street, street2,
-        "", city, region,
-        postalCode, countryName
-      ))
-      val link = Link(id, "HAS_KNOWN_LOCATION", combined)
-      PartialGraph(List(entity), List(link))
+      val combined = List(street, street2, null, city, region, postalCode, countryName).
+        filter(field => field != null).
+        mkString(", ")
+      val entities =
+        if (combined.toString.count(c => c == ',') > 1)  // filter out non-specific addresses
+          List(Entity(combined, address(
+            combined, street, street2,
+            "", city, region,
+            postalCode, countryName
+          )))
+        else
+          List[Entity]()
+      val links = List(Link(id, "HAS_KNOWN_LOCATION", combined))
+      PartialGraph(entities, links)
   }
-
-  def nationalitiesGraph(params: String*): PartialGraph = PartialGraph()
-    /* TODO: investigate neo4j overwriting
-    params match {
-      case Seq(
-        countryName: String, id: String, countryCode,
-        lastSeen, firstSeen
-      ) =>
-        val entity = Entity(id, person(nationality=countryName))
-        PartialGraph(List(entity), List[Link]())
-    }
-    */
 
   def aliasesGraph(params: String*): PartialGraph = params match {
     case Seq(
@@ -82,7 +77,7 @@ class opensanctions extends CSVParser {
           case "individual" => person(name=name, titles=List(title), notes=summary)
           case "entity" => organization(name=name, notes=summary)
         })
-        val combinedName = List(firstName, secondName, thirdName).mkString(",")
+        val combinedName = List(firstName, secondName, thirdName).filter(name => name != null).mkString(" ")
         val akaEntity = Entity(s"$id/aka", entityType match {
           case "individual" => person(combinedName)
           case "entity" => organization(combinedName)

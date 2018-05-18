@@ -3,6 +3,7 @@ package com.archerimpact.architect.arch.pipes
 import com.archerimpact.architect.arch._
 import com.archerimpact.architect.arch.shipments.{GraphShipment, Link}
 import com.sksamuel.elastic4s.http.ElasticDsl._
+import com.sksamuel.elastic4s.http.search.SearchHit
 
 class MatcherPipe extends PipeSpec {
 
@@ -36,13 +37,18 @@ class MatcherPipe extends PipeSpec {
     val elasticClient = newElasticClient()
     for {
       entity <- graph.entities
-      (fieldName, fieldValue) <- protoParams(entity.proto)
-      if matchable.contains(fieldName)
+      (fieldName, fieldValue) <- protoParams(entity.proto) if matchable.contains(fieldName)
       response <- elasticClient.execute(
-        search(s"$index/${typeName(entity.proto)}") query termQuery(fieldName, fieldValue.toString)
+        search(s"$index/${typeName(entity.proto)}") query {
+          constantScoreQuery {
+            termQuery(fieldName, fieldValue.toString)
+          }
+        }
       ).await
-      hit <- response.result.hits.hits if hit.id != entity.id
-    } uploadAndLogLink(entity.id, s"substring_matches_$fieldName".toUpperCase, hit.id)
+      hit <- response.result.hits.hits
+      if hit.id != entity.id
+      if hit.sourceAsMap.getOrElse("dataset", "") != graph.source
+    } uploadAndLogLink(entity.id, s"MATCHED_$fieldName".toUpperCase, hit.id)
   }
 
   override def flow(input: GraphShipment): GraphShipment = {
