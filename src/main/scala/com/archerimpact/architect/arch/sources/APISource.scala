@@ -286,8 +286,9 @@ object APISource extends HttpApp {
       nodeMap.+=(nd.toMap)
     }
 
-    graphDataCarrier(nodeMap, relationshipTuples)
     neo4jSession.close()
+    graphDataCarrier(nodeMap, relationshipTuples)
+
   }
 
   def getFullGraph(architect_id: String, degrees: String): String = {
@@ -470,6 +471,7 @@ object APISource extends HttpApp {
 
     }
 
+    neo4jSession.close()
     relationshipTuples
   }
 
@@ -486,17 +488,19 @@ object APISource extends HttpApp {
     }.await
 
     resp match {
-      case Left(failure) => mutable.Map[String, AnyRef]().toMap
+      case Left(failure) => {
+        elasticClient.close()
+        mutable.Map[String, AnyRef]().toMap
+      }
       case Right(results) => {
         var matchHit = results.result.hits.hits(0)
         var retMap = matchHit.sourceAsMap
         retMap.+=("type" -> matchHit.`type`)
         retMap.+=("id" -> matchHit.id)
+        elasticClient.close()
         retMap
       }
     }
-
-    elasticClient.close()
 
 
   }
