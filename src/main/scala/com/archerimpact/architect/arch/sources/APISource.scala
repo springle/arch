@@ -228,6 +228,7 @@ object APISource extends HttpApp {
     var hN = resp.hasNext
     if (!hN) {
       //TODO: potentially add lonely nodes to list (if necessary)
+      neo4jSession.close()
       return graphDataCarrier(new ListBuffer[Map[String, AnyRef]](), new ListBuffer[Map[String, String]]())
     }
 
@@ -343,7 +344,6 @@ object APISource extends HttpApp {
 
       }
 
-      neo4jSession.close()
 
     }
 
@@ -368,6 +368,8 @@ object APISource extends HttpApp {
     val relStr = compact(render(decompose(relationshipTuples)))
     val nodeStr = compact(render(decompose(nodeMap)))
 
+
+    neo4jSession.close()
     s"""{"nodes": $nodeStr, "links": $relStr}"""
 
   }
