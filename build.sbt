@@ -27,7 +27,8 @@ libraryDependencies ++= Seq(
   "com.sksamuel.elastic4s" %% "elastic4s-http" % elastic4sVersion,
   "com.sksamuel.elastic4s" %% "elastic4s-testkit" % elastic4sVersion % "test",
   "com.sksamuel.elastic4s" %% "elastic4s-embedded" % elastic4sVersion % "test",
-  "com.sksamuel.elastic4s" %% "elastic4s-json4s" % elastic4sVersion
+  "com.sksamuel.elastic4s" %% "elastic4s-json4s" % elastic4sVersion,
+  "net.ruippeixotog" %% "scala-scraper" % "2.1.0"
 )
 
 /**********/
