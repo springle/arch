@@ -139,8 +139,7 @@ that source. Specifically, the
 =parse(data: Array[Byte], url: String): GraphShipment= method of
 =Parser= will be called; however, most Base Parsers will wrap the
 =parse= method with a more specialized method (such as
-=jsonToGraph=). See the write-up below these steps for tips on
-writing a parser. Fundamentally, your parser will receive some raw
+=jsonToGraph=). Fundamentally, your parser will receive some raw
 data, and it should return a =GraphShipment= containing a list of
 =Entity= objects and a list of =Link= objects. Each of the entities
 will wrap a class from one of the protobufs, and each of the links
@@ -194,6 +193,19 @@ preventing anyone else from changing the pipeline in a way that might
 adversely affect one of your parsers.
 
 * Pipes
+  
+| Package                               | Purpose                                                        |
+|---------------------------------------+----------------------------------------------------------------|
+| com.archerimpact.architect.arch.pipes | Wrap Akka Actors to hide complexity and enforce strong typing. |
+
+Arch uses [[https://doc.akka.io/docs/akka/2.5/actors.html][Akka Actors]] for concurrency and error-handling. Since the
+data path and data shipments are predictable, it only needs a subset
+of the tools offered by Actors. A =Pipe= object extends an =Actor=,
+specifies a type of input =Shipment= and output =Shipment=, and
+handles a messages of the input type by processing them and returning
+the output type (potentially with some side-effects, like publishing
+to ElasticSearch). Each pipe runs concurrently, allowing throughput
+proportional to the critical path through the pipeline.
 
 * Shipments
 
