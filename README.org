@@ -32,10 +32,11 @@ extensible. Here are some examples of this design philosophy:
   accepts user data and plugs into the pipeline.
 - Arbitrary data packages (called Shipments) can be passed through
   each pipe.
-- Pipes can run arbitrary code as long as they receive and send a Shipment
+- Pipes can run arbitrary code as long as they receive and send a
+  Shipment.
 - The global ontology for Architect (what is a person, an
   organization, etc) is described in an isolated set of Protocol
-  Buffers (protobufs)
+  Buffers (protobufs).
 
 The expectation has been that Arch will have to change rapidly to
 keep up with Architect, so these design principles are important when
@@ -44,6 +45,13 @@ decisions behind the major components of Arch, so that when a better
 idea or design surfaces these components can be improved, removed, or
 replaced. Similarly, it will try to explain how to extend each of
 these components to satisfy new requirements.
+
+Please load up the source code while going through this
+documentation and look through it. Arch is not a mature enough piece
+of software to be understood without seeing / reading the actual
+code. Hopefully this documentation can be a good reading guide, but
+the source of truth will be the source code. Each section will be
+annotated with the Scala package containing the relevant source code.
 
 * Loaders
 
@@ -66,7 +74,98 @@ and send it to the next pipe.
 |-----------------------------------------+--------------------------------------------------------------------|
 | com.archerimpact.architect.arch.parsers | Convert a raw resource to a graph representation of that resource. |
 
+Parsers encapsulate domain-specific knowledge, and they will typically
+correspond 1:1 to a data source (eg. OFAC, UN Sanctions,
+etc). Converting a raw data source to a =GraphShipment= can be
+difficult, verbose, and time-consuming. To help simplify the task,
+Arch includes an extensible set of "Base Parsers" for each data
+type. They are designed to factor out common tasks for each data
+type (reading a CSV and splitting it into rows, parsing JSON into a
+=JValue= using the =json4s= library, etc).
 
+Parsers currently break some of the isolation principles of Arch,
+because they are associated with a specific URL pattern. Ideally this
+pattern will be improved in a future version of the pipeline, but the
+current steps to plug in a parser are as follows:
+
+** Know your source
+
+Pick a file or set of files to parse, and put
+it/them in a folder in Google Cloud Storage. Specifically, put the
+folder in the =archer-source-data= bucket, nested in a folder
+matching the 3-letter country-code to which the source belongs. If
+the source does not correspond to a single country, place its
+folder in =archer-source-data/global= instead. For example, the
+OFAC SDN list would go in a folder called
+=archer-source-data/usa/ofac= and contain a file called
+=sdn.json=. Similarly, the UN Consolidated Sanctions List from Open
+Sanctions would go in a folder called
+=archer-source-data/global/opensanctions= and contain several CSV
+files containing the relevant data.
+
+** Create a parser
+
+Within Arch, add a Scala file to a package
+matching the Google Cloud Storage directory structure. The package
+should live inside
+=com.archerimpact.architect.arch.parsers.countries=. Continuing the
+previous examples, the OFAC parser for the SDN list would go in
+=com.archerimpact.architect.arch.parsers.countries.usa= in a file
+called =ofac.scala=, and the Open Sanctions parser for the UN
+Consolidated Sanctions List would go in
+=com.archerimpact.architect.arch.parsers.countries.global= in a
+file called =opensanctions.scala=. The file should contain a class
+matching the name of the file, and it must extend
+=com.archerimpact.architect.arch.parsers.Parser=. Alternatively,
+the new parser class can extend one of the Base Parsers (which
+themselves extend =Parser=). See [[file:src/main/scala/com/archerimpact/architect/arch/parsers/countries/usa/ofac.scala][the OFAC parser]] for an
+example. Matching the directory structure in GCS to the package
+structure in Arch is *essential*. This convention allows the
+=GoogleCloudStorage= loader to find the appropriate parser for each
+source it loads in. If you see =ClassNotFound= exceptions when
+testing a new parser, it probably means the directories do not
+match exactly.
+
+** Write the actual parser
+
+To implement a new parser, override
+the abstract methods and fields inherited from the chosen Base
+Parser. For example, the OFAC parser extends =JsonParser= which has
+an abstract method with the following signature:
+=jsonToGraph(data: JValue, url: String): GraphShipment=. When the
+pipeline is running and a source from the parser's folder gets
+loaded in, this function will be called with the actual data for
+that source. Specifically, the
+=parse(data: Array[Byte], url: String): GraphShipment= method of
+=Parser= will be called; however, most Base Parsers will wrap the
+=parse= method with a more specialized method (such as
+=jsonToGraph=). See the write-up below these steps for tips on
+writing a parser. Fundamentally, your parser will receive some raw
+data, and it should return a =GraphShipment= containing a list of
+=Entity= objects and a list of =Link= objects. Each of the entities
+will wrap a class from one of the protobufs, and each of the links
+will refer to two unique id's with a "predicate" describing their
+relationship.
+
+*** Tips on writing a good parser
+
+**** TODO write this section
+
+** Test the parser
+
+Writing a parser is extremely error-prone,
+especially when one parser is applied to many different
+files. Furthermore, the correctness of a parser is extremely
+important. For these reasons, good testing infrastructure is
+essential for a good parser. Recompiling Arch, running the
+companion Docker containers, and running the pre-loader for each
+small test is too much overhead. As an alternative, I highly
+recommend writing a ScalaTest spec for each new parser. See
+[[file:src/test/scala/com/archerimpact/architect/arch/parsers/countries/usa][the OFAC spec]] and [[file:src/test/scala/com/archerimpact/architect/arch/parsers/countries/global][the Open Sanctions spec]] for examples. It may be
+worth reading a bit of the ScalaTest documentation to help
+understand these examples, but it should also be possible to write
+sufficient tests without fully understanding the ScalaTest
+framework. 
 
 * Pipes
 
