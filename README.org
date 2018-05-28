@@ -223,7 +223,26 @@ current shipments:
 
 * DSL
 
+| Package                         | Purpose                                   |
+|---------------------------------+-------------------------------------------|
+| com.archerimpact.architect.arch | Allow easy restructuring of the pipeline. |
+
+The =ArchPipeline.build= method in [[file:src/main/scala/com/archerimpact/architect/arch/Arch.scala][Arch.scala]] builds the entire
+pipeline and Actor System in just a few lines. Any of the pipes can
+easily be rearranged, commented out, etc. Currently, a single data
+source points to a =LoaderPipe=; however, an arbitrary number of data
+sources could just as easily point to arbitrary entry-points to the
+pipeline. The =->:= method attaches a data source to a pipe. The =|:=
+method attaches a pipe to another pipe. And the =\:= method sinks a
+pipe back into the Pipeline.
+
+** TODO write up examples
+
 * Protobufs
+
+| Package                             | Purpose                                                    |
+|-------------------------------------+------------------------------------------------------------|
+| com.archerimpact.architect.ontology | Describe the language-agnostic ontology of "Archer World". |
 
 * Kubernetes (k8s)
 
