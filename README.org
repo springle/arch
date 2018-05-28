@@ -167,6 +167,32 @@ understand these examples, but it should also be possible to write
 sufficient tests without fully understanding the ScalaTest
 framework. 
 
+These test files are designed to shortcut the pipeline and the
+preloader by passing a hard-coded URL to the =loadFromGoogle= method
+and calling the =parse= method directly. The following two lines load
+and parse the SDN list in the OFAC spec:
+
+#+BEGIN_SRC scala
+  val file: FileShipment = loadFromGoogle("gs://archer-source-data/usa/ofac/sdn.json")
+  val graph: GraphShipment = file.parser.fileToGraph(file)
+#+END_SRC
+
+If the file cannot be found in GCS or its directory structure does not
+match a known parser, the test will fail on this first line. If there
+is a bug that crashes the program during parsing, the test will fail
+on the second line. If the test does not crash after the second line,
+it can run a suite of assertions on the =GraphShipment= returned from
+parsing to verify the results. It may also be useful to set
+breakpoints in the parser and run the debugger during testing rather
+than only observing the returned graph.
+
+Writing several assertions in the test file while writing the parser
+is a good practice, because it will alert you if older parts of the
+parser break while you write new parts. These test files can
+eventually be collected and run every time a change is made to Arch,
+preventing anyone else from changing the pipeline in a way that might
+adversely affect one of your parsers.
+
 * Pipes
 
 * Shipments
