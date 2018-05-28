@@ -209,7 +209,17 @@ proportional to the critical path through the pipeline.
 
 * Shipments
 
-* Sources
+| Package                                   | Purpose                                         |
+|-------------------------------------------+-------------------------------------------------|
+| com.archerimpact.architect.arch.shipments | Define data-types to flow through the pipeline. |
+
+Each pipe expects a specific input type and promises a specific output
+type. Shipments define those types. Following are a few examples of
+current shipments:
+
+- A =UrlShipment= holds a URL for a file.
+- A =FileShipment= holds the raw data for a file.
+- A =GraphShipment= holds a list of =Entity= and =Link= objects.
 
 * DSL
 
