@@ -19,3 +19,67 @@
 Arch is a data pipeline to build and maintain the
 state of Architect. See [[https://github.com/springle/arch-tools][arch-tools]] for companion tools.
 
+* Overview
+
+Arch is a pile of infrastructure designed to load arbitrary data,
+parse it, model it as a graph, and send it to any number of
+targets. Each component of Arch tries to be isolated, replaceable, and
+extensible. Here are some examples of this design philosophy:
+
+- The pipes through which data flows can be rearranged into an
+  arbitrary DAG.
+- Data can be loaded from an arbitrary source, including an API that
+  accepts user data and plugs into the pipeline.
+- Arbitrary data packages (called Shipments) can be passed through
+  each pipe.
+- Pipes can run arbitrary code as long as they receive and send a Shipment
+- The global ontology for Architect (what is a person, an
+  organization, etc) is described in an isolated set of Protocol
+  Buffers (protobufs)
+
+The expectation has been that Arch will have to change rapidly to
+keep up with Architect, so these design principles are important when
+adding to Arch. This documentation will attempt to explain the design
+decisions behind the major components of Arch, so that when a better
+idea or design surfaces these components can be improved, removed, or
+replaced. Similarly, it will try to explain how to extend each of
+these components to satisfy new requirements.
+
+* Loaders
+
+| Package                                 | Purpose                                                     |
+|-----------------------------------------+-------------------------------------------------------------|
+| com.archerimpact.architect.arch.loaders | Convert a description of a resource to the actual resource. |
+
+Currently, loaders are being used to convert =UrlShipment= objects
+(pointing to files in Google Cloud Storage) into =FileShipment=
+objects which hold the actual contents of those files, along with some
+meta-data. The concept of a loader could easily be extended to support
+web scraping. For example, one could implement a loader which knew how
+to accept =UrlShipment= objects pointing to Facebook posts that would
+download the contents of the web page, package it as a =FileShipment=,
+and send it to the next pipe.
+
+* Parsers
+
+| Package                                 | Purpose                                                            |
+|-----------------------------------------+--------------------------------------------------------------------|
+| com.archerimpact.architect.arch.parsers | Convert a raw resource to a graph representation of that resource. |
+
+
+
+* Pipes
+
+* Shipments
+
+* Sources
+
+* DSL
+
+* Protobufs
+
+* Kubernetes (k8s)
+
+* IntelliJ
+
+* Opinions
