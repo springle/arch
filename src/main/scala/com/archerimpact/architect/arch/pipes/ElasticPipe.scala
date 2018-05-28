@@ -19,17 +19,7 @@ class ElasticPipe extends PipeSpec {
     val indexName = scala.util.Properties.envOrElse("ELASTIC_INDEX", "entities")
     val elasticClient = newElasticClient()
     elasticClient.execute {
-      createIndex(indexName).mappings(
-        mapping("person").fields(
-          textField("name").analyzer(KeywordAnalyzer)
-        ),
-        mapping("organization").fields(
-          textField("name").analyzer(KeywordAnalyzer)
-        ),
-        mapping("identifyingDocument").fields(
-          textField("number").analyzer(KeywordAnalyzer)
-        )
-      )
+      createIndex(indexName)
     }.await
     val commands: Seq[BulkCompatibleDefinition] = for (entity <- graph.entities) yield {
        update(entity.id) in s"$indexName/${typeName(entity.proto)}" docAsUpsert compact(render(
