@@ -24,33 +24,33 @@ import scala.collection.mutable.ListBuffer
 object APISource extends HttpApp {
 
   case class graphDataCarrier(nodes: ListBuffer[Map[String, AnyRef]], rels: ListBuffer[Map[String, String]])
+  case class rawDataCarrier(nodes: List[String], rels: ListBuffer[Map[String, String]])
 
   implicit val formats: DefaultFormats.type = DefaultFormats
 
   override def routes: Route =
     parameters("id", "degrees", "expandby", "exclude", "attr", "attrVal") { (architect_id, degrees, expand, exclude, attr, attrVal) =>
 
-      //TODO: secure shit, validate architect id and degrees
+      //TODO: secure shit, validate architect id and degrees, no drop table, script tags, escape characters
 
       println(s"Getting $degrees degrees of data for node with id: $architect_id")
 
       degrees match {
         case "0" => {
-          var lb = new ListBuffer[Map[String, AnyRef]]()
-          lb.+=(getNodeInfo(architect_id))
-          val jsonData: String = compact(render(decompose(lb)))
-          var singleNodeInfo: String = s"""{"nodes" : $jsonData, "links": []}"""
+          val singleNodeInfo: String = getSingleNodeResponse(architect_id)
 
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
             complete(HttpEntity(ContentTypes.`application/json`, "" + singleNodeInfo))
           }
         } case "1" => {
-          val graphJSON = getExpand(architect_id, expand, exclude, attr, attrVal)
+          val expandJSON = getExpand(architect_id, expand, exclude, attr, attrVal)
+
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
-            complete(HttpEntity(ContentTypes.`application/json`, "" + graphJSON))
+            complete(HttpEntity(ContentTypes.`application/json`, "" + expandJSON))
           }
         } case _ => {
           val graphData = getFullGraph(architect_id, degrees)
+
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
             complete(HttpEntity(ContentTypes.`application/json`, "" + graphData))
           }
@@ -188,16 +188,6 @@ object APISource extends HttpApp {
       newData = filterAttribute(newData, attr, attrVal)
     }
 
-
-//    if (filterString.contains(",")) {
-//      var filterList = filterString.split(",")
-//      for (flt <- filterList) {
-//        newData = filterGraph(newData, flt, ex)
-//      }
-//    } else {
-//      newData = filterGraph(oldData, filterString, ex)
-//    }
-
     var endRels = newData.rels
     var endNodes = newData.nodes
 
@@ -217,62 +207,13 @@ object APISource extends HttpApp {
   }
 
   def getGraphData(architect_id: String, degrees: String): graphDataCarrier = {
-    val neo4jSession = newNeo4jSession()
-
-    //query neo4j for all nodes connected to start node with architect_id
-    var fullQuery =
-      s"""MATCH path=(g)-[r*0..$degrees]-(p) WHERE g.architectId='$architect_id' UNWIND r as rel UNWIND nodes(path) as n RETURN COLLECT(distinct rel) AS collected, COLLECT(distinct n) as nodes, g""".stripMargin
-
-    var resp = neo4jSession.run(fullQuery)
-    //extract info from neo4j records response
-    var hN = resp.hasNext
-    if (!hN) {
-      //TODO: potentially add lonely nodes to list (if necessary)
-      neo4jSession.close()
-      return graphDataCarrier(new ListBuffer[Map[String, AnyRef]](), new ListBuffer[Map[String, String]]())
-    }
-
-    var relationshipTuples = new ListBuffer[Map[String, String]]()
-    var idMap = mutable.Map[String, String]()
-
-    var record = resp.next()
-
-    var rels = record.get("collected")
-    var nodes = record.get("nodes")
-    var thisNode = record.get("g")
-
-    val relSize = rels.size()
-    val numNodes = nodes.size()
-
-    for (i <- 0 until numNodes) {
-      var node = nodes.get(i).asNode()
-      idMap.+=(node.id().toString -> node.get("architectId").toString)
-    }
-
-    for (i <- 0 until relSize) {
-      var relation = rels.get(i).asRelationship()
-      val start = idMap.get(relation.startNodeId().toString).get
-      val end = idMap.get(relation.endNodeId().toString).get
-
-      var cleanStart = start.toString.replace("\\","")
-      cleanStart = cleanStart.substring(1, cleanStart.length-1)
-
-      var cleanEnd = end.toString.replace("\\","")
-      cleanEnd = cleanEnd.substring(1, cleanEnd.length-1)
-
-      var relMap = mutable.Map[String, String]()
-      relMap.+=("source" -> cleanStart.toString)
-      relMap.+=("type" -> relation.`type`.toString)
-      relMap.+=("target" -> cleanEnd.toString)
-      relMap.+=("id" -> ("" + cleanStart.toString + relation.`type`.toString + cleanEnd.toString))
-
-      relationshipTuples.+=(relMap.toMap)
-    }
+    val rawData = getRawNodesAndRelationships(architect_id, degrees)
+    var relationshipTuples = rawData.rels
 
     var linksMap = getNeighborLinkCounts(architect_id, degrees.toInt)
 
     var nodeMap = new ListBuffer[Map[String, AnyRef]]
-    for (arch_id <- idMap.values.toList) {
+    for (arch_id <- rawData.nodes) {
       var nd = mutable.Map() ++ getNodeInfo(arch_id.toString)
       var linksCountMap = mutable.Map() ++ linksMap.get(nd.get("id").get.toString).get
       var total = 0
@@ -287,7 +228,6 @@ object APISource extends HttpApp {
       nodeMap.+=(nd.toMap)
     }
 
-    neo4jSession.close()
     graphDataCarrier(nodeMap, relationshipTuples)
 
   }
@@ -402,20 +342,6 @@ object APISource extends HttpApp {
         }
       }
 
-//      if (idToCountMap.contains(start)) {
-//        var linkMap = idToCountMap.get(start).get
-//        if (linkMap.contains(tp)) linkMap.update(tp, linkMap.get(tp).get + adder)
-//        else linkMap.+=(tp -> adder)
-//        idToCountMap.update(start, linkMap)
-//      } else {
-//        idToCountMap.+=(start -> adder)
-//      }
-//
-//      if (idToCountMap.contains(end)) {
-//        idToCountMap.update(end, idToCountMap.get(end).get + adder)
-//      } else {
-//        idToCountMap.+=(end -> adder)
-//      }
     }
 
     idToCountMap.toMap
@@ -505,6 +431,70 @@ object APISource extends HttpApp {
     }
 
 
+  }
+
+  def getSingleNodeResponse(architect_id: String): String = {
+    var lb = new ListBuffer[Map[String, AnyRef]]()
+    lb.+=(getNodeInfo(architect_id))
+    val jsonData: String = compact(render(decompose(lb)))
+    s"""{"nodes" : $jsonData, "links": []}"""
+  }
+
+  def getRawNodesAndRelationships(architect_id: String, degrees: String): rawDataCarrier = {
+    val neo4jSession = newNeo4jSession()
+
+    //query neo4j for all nodes connected to start node with architect_id
+    var fullQuery =
+      s"""MATCH path=(g)-[r*0..$degrees]-(p) WHERE g.architectId='$architect_id' UNWIND r as rel UNWIND nodes(path) as n RETURN COLLECT(distinct rel) AS collected, COLLECT(distinct n) as nodes, g""".stripMargin
+
+    var resp = neo4jSession.run(fullQuery)
+    //extract info from neo4j records response
+    var hN = resp.hasNext
+    if (!hN) {
+      //TODO: potentially add lonely nodes to list (if necessary)
+      neo4jSession.close()
+      return rawDataCarrier(List(), new ListBuffer[Map[String, String]]())
+    }
+
+    var relationshipTuples = new ListBuffer[Map[String, String]]()
+    var idMap = mutable.Map[String, String]()
+
+    var record = resp.next()
+
+    var rels = record.get("collected")
+    var nodes = record.get("nodes")
+    var thisNode = record.get("g")
+
+    val relSize = rels.size()
+    val numNodes = nodes.size()
+
+    for (i <- 0 until numNodes) {
+      var node = nodes.get(i).asNode()
+      idMap.+=(node.id().toString -> node.get("architectId").toString)
+    }
+
+    for (i <- 0 until relSize) {
+      var relation = rels.get(i).asRelationship()
+      val start = idMap.get(relation.startNodeId().toString).get
+      val end = idMap.get(relation.endNodeId().toString).get
+
+      var cleanStart = start.toString.replace("\\","")
+      cleanStart = cleanStart.substring(1, cleanStart.length-1)
+
+      var cleanEnd = end.toString.replace("\\","")
+      cleanEnd = cleanEnd.substring(1, cleanEnd.length-1)
+
+      var relMap = mutable.Map[String, String]()
+      relMap.+=("source" -> cleanStart.toString)
+      relMap.+=("type" -> relation.`type`.toString)
+      relMap.+=("target" -> cleanEnd.toString)
+      relMap.+=("id" -> ("" + cleanStart.toString + relation.`type`.toString + cleanEnd.toString))
+
+      relationshipTuples.+=(relMap.toMap)
+    }
+
+    neo4jSession.close()
+    rawDataCarrier(idMap.values.toList, relationshipTuples)
   }
 
 }
