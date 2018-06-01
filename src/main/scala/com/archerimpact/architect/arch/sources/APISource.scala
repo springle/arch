@@ -49,10 +49,8 @@ object APISource extends HttpApp {
             complete(HttpEntity(ContentTypes.`application/json`, "" + expandJSON))
           }
         } case _ => {
-          val graphData = getFullGraph(architect_id, degrees)
-
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
-            complete(HttpEntity(ContentTypes.`application/json`, "" + graphData))
+            complete(HttpEntity(ContentTypes.`application/json`, "The endpoint for degrees > 1 has been deprecated."))
           }
         }
       }
@@ -232,91 +230,10 @@ object APISource extends HttpApp {
 
   }
 
-  def getFullGraph(architect_id: String, degrees: String): String = {
-    //create new neo4j session
-    val neo4jSession = newNeo4jSession()
-
-    //query neo4j for all nodes connected to start node with architect_id
-    var fullQuery =
-      s"""MATCH path=(g)-[r*0..$degrees]-(p) WHERE g.architectId='$architect_id' UNWIND r as rel UNWIND nodes(path) as n RETURN COLLECT(distinct rel) AS collected, COLLECT(distinct n) as nodes, g""".stripMargin
-
-    var resp = neo4jSession.run(fullQuery)
-    //extract info from neo4j records response
-    var hN = resp.hasNext
-
-    var relationshipTuples = new ListBuffer[Map[String, String]]()
-    var idMap = mutable.Map[String, String]()
-
-    if (hN) {
-      var record = resp.next()
-
-      var rels = record.get("collected")
-      var nodes = record.get("nodes")
-      var thisNode = record.get("g")
-
-      val relSize = rels.size()
-      val numNodes = nodes.size()
-
-      for (i <- 0 until numNodes) {
-        var node = nodes.get(i).asNode()
-        idMap.+=(node.id().toString -> node.get("architectId").toString)
-      }
-
-      for (i <- 0 until relSize) {
-        var relation = rels.get(i).asRelationship()
-        val start = idMap.get(relation.startNodeId().toString).get
-        val end = idMap.get(relation.endNodeId().toString).get
-
-        var cleanStart = start.toString.replace("\\","")
-        cleanStart = cleanStart.substring(1, cleanStart.length-1)
-
-        var cleanEnd = end.toString.replace("\\","")
-        cleanEnd = cleanEnd.substring(1, cleanEnd.length-1)
-
-        var relMap = mutable.Map[String, String]()
-        relMap.+=("source" -> cleanStart.toString)
-        relMap.+=("type" -> relation.`type`.toString)
-        relMap.+=("target" -> cleanEnd.toString)
-        relMap.+=("id" -> ("" + cleanStart.toString + relation.`type`.toString + cleanEnd.toString))
-
-        relationshipTuples.+=(relMap.toMap)
-
-
-      }
-
-
-    }
-
-    var linksMap = getNeighborLinkCounts(architect_id, degrees.toInt)
-
-    var nodeMap = new ListBuffer[Map[String, AnyRef]]
-    for (arch_id <- idMap.values.toList) {
-      var nd = mutable.Map() ++ getNodeInfo(arch_id.toString)
-      var linksCountMap = mutable.Map() ++ linksMap.get(nd.get("id").get.toString).get
-      var total = 0
-      var microLinksMap = mutable.Map[String, String]()
-      for (tp <- linksCountMap.keys) {
-        var count = linksCountMap.get(tp).get
-        microLinksMap.+=(tp.toString -> count.toString)
-        total += count
-      }
-      nd.+=("linkTypes" -> microLinksMap)
-      nd.+=("totalLinks" -> total.toString)
-      nodeMap.+=(nd.toMap)
-    }
-
-    val relStr = compact(render(decompose(relationshipTuples)))
-    val nodeStr = compact(render(decompose(nodeMap)))
-
-
-    neo4jSession.close()
-    s"""{"nodes": $nodeStr, "links": $relStr}"""
-
-  }
-
   def getNeighborLinkCounts(architect_id: String, degrees: Int): Map[String, Map[String, Int]] = {
     //gets all relationships in a list of all nodes within x degrees
-    val relList = getAllRelationships(architect_id, (degrees+1).toString)
+    //val relList = getAllRelationships(architect_id, (degrees+1).toString)
+    val relList = getRawNodesAndRelationships(architect_id, (degrees+1).toString).rels
 
     var idToCountMap = mutable.Map[String, Map[String, Int]]()
     for (relMap <- relList) {
@@ -346,61 +263,6 @@ object APISource extends HttpApp {
 
     idToCountMap.toMap
 
-  }
-
-  def getAllRelationships(architect_id: String, degrees: String): ListBuffer[Map[String, String]] = {
-    val neo4jSession = newNeo4jSession()
-
-    //query neo4j for all nodes connected to start node with architect_id
-    var fullQuery =
-      s"""MATCH path=(g)-[r*0..$degrees]-(p) WHERE g.architectId='$architect_id' UNWIND r as rel UNWIND nodes(path) as n RETURN COLLECT(distinct rel) AS collected, COLLECT(distinct n) as nodes, g""".stripMargin
-
-    var resp = neo4jSession.run(fullQuery)
-    //extract info from neo4j records response
-    var hN = resp.hasNext
-
-    var relationshipTuples = new ListBuffer[Map[String, String]]()
-    var idMap = mutable.Map[String, String]()
-
-    if (hN) {
-      var record = resp.next()
-
-      var rels = record.get("collected")
-      var nodes = record.get("nodes")
-      var thisNode = record.get("g")
-
-      val relSize = rels.size()
-      val numNodes = nodes.size()
-
-      for (i <- 0 until numNodes) {
-        var node = nodes.get(i).asNode()
-        idMap.+=(node.id().toString -> node.get("architectId").toString)
-      }
-
-      for (i <- 0 until relSize) {
-        var relation = rels.get(i).asRelationship()
-        val start = idMap.get(relation.startNodeId().toString).get
-        val end = idMap.get(relation.endNodeId().toString).get
-
-        var cleanStart = start.toString.replace("\\","")
-        cleanStart = cleanStart.substring(1, cleanStart.length-1)
-
-        var cleanEnd = end.toString.replace("\\","")
-        cleanEnd = cleanEnd.substring(1, cleanEnd.length-1)
-
-        var relMap = mutable.Map[String, String]()
-        relMap.+=("source" -> cleanStart.toString)
-        relMap.+=("type" -> relation.`type`.toString)
-        relMap.+=("target" -> cleanEnd.toString)
-
-
-        relationshipTuples.+=(relMap.toMap)
-      }
-
-    }
-
-    neo4jSession.close()
-    relationshipTuples
   }
 
   def getNodeInfo(architect_id: String): Map[String, AnyRef] = {
