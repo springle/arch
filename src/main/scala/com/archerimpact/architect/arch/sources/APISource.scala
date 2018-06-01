@@ -303,18 +303,19 @@ object APISource extends HttpApp {
   }
 
   def getRawNodesAndRelationships(architect_id: String, degrees: String): rawDataCarrier = {
-    val neo4jSession = newNeo4jSession()
 
     //query neo4j for all nodes connected to start node with architect_id
+    val neo4jSession = newNeo4jSession()
     var fullQuery =
       s"""MATCH path=(g)-[r*0..$degrees]-(p) WHERE g.architectId='$architect_id' UNWIND r as rel UNWIND nodes(path) as n RETURN COLLECT(distinct rel) AS collected, COLLECT(distinct n) as nodes, g""".stripMargin
 
     var resp = neo4jSession.run(fullQuery)
+    neo4jSession.close()
+
     //extract info from neo4j records response
     var hN = resp.hasNext
     if (!hN) {
       //TODO: potentially add lonely nodes to list (if necessary)
-      neo4jSession.close()
       return rawDataCarrier(List(), new ListBuffer[Map[String, String]]())
     }
 
@@ -355,7 +356,6 @@ object APISource extends HttpApp {
       relationshipTuples.+=(relMap.toMap)
     }
 
-    neo4jSession.close()
     rawDataCarrier(idMap.values.toList, relationshipTuples)
   }
 
