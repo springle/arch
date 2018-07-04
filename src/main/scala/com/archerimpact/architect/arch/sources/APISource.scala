@@ -3,7 +3,8 @@ package com.archerimpact.architect.arch
 import akka.actor.{ActorRef, Props}
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
-import akka.http.scaladsl.server.{HttpApp, Route}
+import akka.http.scaladsl.server.{Directive1, HttpApp, Route}
+import akka.http.scaladsl.unmarshalling.FromRequestUnmarshaller
 import com.archerimpact.architect.arch.pipes._
 import com.archerimpact.architect.arch.shipments.UrlShipment
 import com.sksamuel.elastic4s.http.{ElasticDsl, RequestFailure}
@@ -17,6 +18,10 @@ import org.json4s.native.JsonMethods._
 import org.json4s.JValue
 import org.json4s.Extraction._
 import org.neo4j.driver.v1.types.Relationship
+import akka.http.scaladsl.server.Directives
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import com.sksamuel.elastic4s.http.search.SearchHit
+import spray.json._
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -28,8 +33,11 @@ object APISource extends HttpApp {
 
   implicit val formats: DefaultFormats.type = DefaultFormats
 
+  //TODO: elasticsearch wrapper api
+
   override def routes: Route =
-    parameters("id", "degrees", "expandby", "exclude", "attr", "attrVal") { (architect_id, degrees, expand, exclude, attr, attrVal) =>
+
+    parameters("search" ? "*", "id" ? "none", "degrees" ? "none", "expandby" ? "*", "exclude" ? "*", "attr" ? "*", "attrVal" ? "*") { (searchStr, architect_id, degrees, expand, exclude, attr, attrVal) =>
 
       //TODO: secure shit, validate architect id and degrees, no drop table, script tags, escape characters
 
@@ -48,14 +56,51 @@ object APISource extends HttpApp {
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
             complete(HttpEntity(ContentTypes.`application/json`, "" + expandJSON))
           }
+        } case "none" => {
+          respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
+            complete(HttpEntity(ContentTypes.`application/json`, "" + searchWrapper(searchStr)))
+          }
         } case _ => {
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
-            complete(HttpEntity(ContentTypes.`application/json`, "The endpoint for degrees > 1 has been deprecated."))
+            complete(HttpEntity(ContentTypes.`application/json`, "This endpoint has been deprecated."))
           }
         }
       }
 
     }
+
+  def searchWrapper(queryStr: String): String = {
+    var ESResponse = searchElastic(queryStr)
+    "" + compact(render(decompose(ESResponse)))
+  }
+
+  def searchElastic(queryStr: String): List[Map[String,AnyRef]] = {
+    val elasticClient = newElasticClient()
+
+    val resp = elasticClient.execute{
+      search("entities*") query queryStr
+    }.await
+
+    resp match {
+      case Left(failure) => {
+        elasticClient.close()
+        List()
+      }
+      case Right(results) => {
+        var matchHits = results.result.hits.hits
+        elasticClient.close()
+        matchHits.toList.map(parseSearchHit)
+      }
+    }
+  }
+
+  def parseSearchHit(hit: SearchHit): Map[String, AnyRef] = {
+    var hitMap = hit.sourceAsMap
+    hitMap.+=("type" -> hit.`type`)
+    hitMap.+=("id" -> hit.id.toString)
+    hitMap.+=("score" -> hit.score.toString)
+    hitMap
+  }
 
   def filterAttribute(data: graphDataCarrier, attrName: String, attrValue: String): graphDataCarrier = {
     var nodes = data.nodes

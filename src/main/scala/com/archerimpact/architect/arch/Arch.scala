@@ -3,7 +3,7 @@ package com.archerimpact.architect.arch
 import akka.actor.{ActorSystem, Props}
 import ch.qos.logback.classic.{Level, Logger}
 import com.archerimpact.architect.arch.pipes._
-import com.archerimpact.architect.arch.sources.RMQSource
+import com.archerimpact.architect.arch.sources._
 import org.slf4j.LoggerFactory
 
 /*
