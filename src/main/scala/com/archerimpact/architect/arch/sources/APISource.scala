@@ -102,7 +102,7 @@ object APISource extends HttpApp {
     //print(searchResults)
     for (hit <- searchResults) {
       var name = hit.getOrElse("name", "no name found on this entity").toString
-      if (normalize(name) == compareQueryStr) {
+      if (tokenCompare(normalize(name), compareQueryStr)) {
         topList.+=(hit + ("exact" -> "true"))
       } else {
         bottomList.+=(hit)
@@ -115,15 +115,13 @@ object APISource extends HttpApp {
     txt.toLowerCase.replaceAll(",", "")
   }
 
-  def permuteWords(txt: String): List[String] = {
-    var tokens = txt.split(" ")
-    if (tokens.size == 1) {
-      txt
-    } else {
-      for (i until tokens.indices) {
-
-      }
+  def tokenCompare(txt1: String, txt2: String): Boolean = {
+    var tokens1 = txt1.split(" ")
+    var tokens2 = txt2.split(" ")
+    for (tok1 <- tokens1) {
+      if (!tokens2.contains(tok1)) return false
     }
+    true
   }
 
   def parseSearchHit(hit: SearchHit): Map[String, AnyRef] = {
