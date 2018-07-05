@@ -70,15 +70,15 @@ object APISource extends HttpApp {
     }
 
   def searchWrapper(queryStr: String): String = {
-    var ESResponse = searchElastic(queryStr)
+    var ESResponse = searchElasticSearch(queryStr)
     "" + compact(render(decompose(ESResponse)))
   }
 
-  def searchElastic(queryStr: String): List[Map[String,AnyRef]] = {
+  def searchElasticSearch(queryStr: String): List[Map[String,AnyRef]] = {
     val elasticClient = newElasticClient()
 
     val resp = elasticClient.execute{
-      search("entities*") query queryStr
+      search("entities*") query queryStr limit 50
     }.await
 
     resp match {
@@ -89,7 +89,39 @@ object APISource extends HttpApp {
       case Right(results) => {
         var matchHits = results.result.hits.hits
         elasticClient.close()
-        matchHits.toList.map(parseSearchHit)
+        sortResults(queryStr, matchHits.toList.map(parseSearchHit))
+      }
+    }
+  }
+
+  def sortResults(searchQuery: String, searchResults: List[Map[String, AnyRef]]): List[Map[String, AnyRef]] = {
+    var topList = mutable.ListBuffer[Map[String, AnyRef]]()
+    var bottomList = mutable.ListBuffer[Map[String, AnyRef]]()
+
+    var compareQueryStr = normalize(searchQuery)
+    //print(searchResults)
+    for (hit <- searchResults) {
+      var name = hit.getOrElse("name", "no name found on this entity").toString
+      if (normalize(name) == compareQueryStr) {
+        topList.+=(hit + ("exact" -> "true"))
+      } else {
+        bottomList.+=(hit)
+      }
+    }
+    bottomList.++=:(topList).toList
+  }
+
+  def normalize(txt: String): String = {
+    txt.toLowerCase.replaceAll(",", "")
+  }
+
+  def permuteWords(txt: String): List[String] = {
+    var tokens = txt.split(" ")
+    if (tokens.size == 1) {
+      txt
+    } else {
+      for (i until tokens.indices) {
+
       }
     }
   }
