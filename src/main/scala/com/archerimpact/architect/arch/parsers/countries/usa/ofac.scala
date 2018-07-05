@@ -93,13 +93,10 @@ class ofac extends JSONParser {
   }
 
   /* Utility function to get aliases for an entity */
-  def getAliases(jv: JValue, subtype: String, id: String): List[Entity] = jv match {
+  def getAliases(jv: JValue, subtype: String, id: String): List[String] = jv match {
     case JArray(aliases) =>
-      aliases.children.map(alias => Entity(
-        id = s"$id/aka/" + (alias \\ "display_name").extract[String],
-        proto = getProtoForSubtype(subtype, (alias \\ "display_name").extract[String])
-      ))
-    case _ => List[Entity]()
+      aliases.children.map(alias => (alias \\ "display_name").extract[String])
+    case _ => List[String]()
   }
 
   /* Utility function to extract links */
@@ -146,11 +143,12 @@ class ofac extends JSONParser {
     val emailAddresses: List[String] = getDetails(listing, "Email Address")
     val websites: List[String] = getDetails(listing, "Website")
     val subtype: String = (listing \ "party_sub_type").extract[String]
+    val aliases: List[String] = getAliases(listing \\ "aliases", subtype, id)
 
     /* Determine entity type */
     val proto = (subtype: @unchecked) match {
-      case "Entity"     => organization(name, emailAddresses, websites)
-      case "Individual" => person(name, dateOfBirth, placeOfBirth, titles, emailAddresses, websites)
+      case "Entity"     => organization(name, emailAddresses, websites, aliases)
+      case "Individual" => person(name, dateOfBirth, placeOfBirth, titles, emailAddresses, websites, aliases)
       case "Vessel"     => vessel(name)
       case "Aircraft"   => aircraft(name)
     }
@@ -160,8 +158,8 @@ class ofac extends JSONParser {
     val idDocLinks = idDocs.map(idDoc => Link(id, "HAS_ID_DOC", idDoc.id))
 
     /* Extract aliases */
-    val aliases = getAliases(listing \\ "aliases", subtype, id)
-    val aliasLinks = aliases.map(alias => Link(id, "AKA", alias.id))
+    //val aliases = getAliases(listing \\ "aliases", subtype, id)
+    //val aliasLinks = aliases.map(alias => Link(id, "AKA", alias.id))
 
     /* Extract sanction events */
     val sanctionEvents = getSanctionEvents(listing \\ "sanctions_entries")
@@ -178,8 +176,8 @@ class ofac extends JSONParser {
     val primaryEntity = Entity(id, proto)
 
     /* Generate partial graph */
-    val entities = primaryEntity :: idDocs ::: aliases ::: sanctionEvents ::: locations
-    val links = officialLinks ::: idDocLinks ::: aliasLinks ::: sanctionLinks ::: locationLinks
+    val entities = primaryEntity :: idDocs ::: sanctionEvents ::: locations
+    val links = officialLinks ::: idDocLinks ::: sanctionLinks ::: locationLinks
     PartialGraph(entities, links)
   }
 
