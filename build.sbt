@@ -11,7 +11,7 @@ PB.targets in Compile := Seq(
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion,
-  "com.typesafe.akka" %% "akka-http"   % "10.1.1",
+  "com.typesafe.akka" %% "akka-http"   % "10.1.2",
   "com.typesafe.akka" %% "akka-stream" % "2.5.11",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
   "org.scala-lang.modules" %% "scala-xml" % "1.1.0",
@@ -29,7 +29,7 @@ libraryDependencies ++= Seq(
   "com.sksamuel.elastic4s" %% "elastic4s-embedded" % elastic4sVersion % "test",
   "com.sksamuel.elastic4s" %% "elastic4s-json4s" % elastic4sVersion,
   "net.ruippeixotog" %% "scala-scraper" % "2.1.0",
-  "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.1"
+  "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.2"
 )
 
 /**********/
