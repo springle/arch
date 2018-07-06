@@ -20,7 +20,8 @@ class MatcherPipe extends PipeSpec {
   }
 
   def uploadLink(link: Link): Unit = {
-    val neo4jSession = newNeo4jSession()
+    val neo4jDriver = newNeo4jSession()
+    val neo4jSession = neo4jDriver.session
     neo4jSession.run(
       s"""
           MATCH (subject)
@@ -31,6 +32,8 @@ class MatcherPipe extends PipeSpec {
           MERGE (subject)<-[:${link.predicate}]->(object)
        """.stripMargin
     )
+    neo4jDriver.close()
+    neo4jSession.close()
   }
 
   def matchGraph(graph: GraphShipment): Unit = {

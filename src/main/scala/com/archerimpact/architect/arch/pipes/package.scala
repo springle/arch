@@ -12,11 +12,11 @@ package object pipes {
     HttpClient(elastic4s.ElasticsearchClientUri(host, port.toInt))
   }
 
-  def newNeo4jSession(): Session = {
+  def newNeo4jSession(): Driver = {
     val host = scala.util.Properties.envOrElse("NEO4J_HOST", "localhost")
     val port = scala.util.Properties.envOrElse("NEO4J_PORT", "7687")
     val driver: Driver = GraphDatabase.driver(s"bolt://$host/$port")
-    driver.session
+    driver//.session
   }
 
 }
