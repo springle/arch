@@ -48,7 +48,7 @@ object APISource extends HttpApp {
 
   override def routes: Route =
 
-    parameters("search" ? "*", "id" ? "none", "degrees" ? "none", "expandby" ? "*", "exclude" ? "*", "attr" ? "*", "attrVal" ? "*") { (searchStr, architect_id, degrees, expand, exclude, attr, attrVal) =>
+    parameters("search" ? "*", "id" ? "none", "degrees" ? "none", "expandby" ? "*", "exclude" ? "*", "attr" ? "*", "attrVal" ? "*", "from" ? "0", "size" ? "50") { (searchStr, architect_id, degrees, expand, exclude, attr, attrVal, from, size) =>
 
       //TODO: secure shit, validate architect id and degrees, no drop table, script tags, escape characters
 
@@ -69,7 +69,7 @@ object APISource extends HttpApp {
           }
         } case "none" => {
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
-            complete(HttpEntity(ContentTypes.`application/json`, "" + searchWrapper(searchStr)))
+            complete(HttpEntity(ContentTypes.`application/json`, "" + searchWrapper(searchStr, from, size)))
           }
         } case _ => {
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
@@ -80,12 +80,13 @@ object APISource extends HttpApp {
 
     }
 
-  def searchWrapper(queryStr: String): String = {
+  def searchWrapper(queryStr: String, from:String = "0", size:String = "50"): String = {
     //var ESResponse = searchElasticSearch(queryStr)
     //"" + compact(render(decompose(ESResponse)))
-    println(s"Searching for $queryStr")
+    val fullQueryStr = queryStr + s"&from=$from&size=$size"
+    println(s"Searching for $fullQueryStr")
 
-    val seJSONStr = getSeJsonStr(queryStr)
+    val seJSONStr = getSeJsonStr(fullQueryStr)
     val resultIDS = getSeResultIDs(seJSONStr)
     val resultScores = getResultScores(seJSONStr)
     val triedResults = resultIDS zip resultScores map {resultTuple =>
