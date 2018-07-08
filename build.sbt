@@ -29,7 +29,8 @@ libraryDependencies ++= Seq(
   "com.sksamuel.elastic4s" %% "elastic4s-embedded" % elastic4sVersion % "test",
   "com.sksamuel.elastic4s" %% "elastic4s-json4s" % elastic4sVersion,
   "net.ruippeixotog" %% "scala-scraper" % "2.1.0",
-  "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.2"
+  "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.2",
+  "org.scalaj" %% "scalaj-http" % "2.4.0"
 )
 
 /**********/

@@ -1,8 +1,8 @@
 package com.archerimpact.architect.arch
 
-import akka.actor.{ActorRef, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.{Directive1, HttpApp, Route}
 import akka.http.scaladsl._
 import akka.http.scaladsl.unmarshalling.{FromRequestUnmarshaller, Unmarshal}
@@ -21,13 +21,18 @@ import org.json4s.Extraction._
 import org.neo4j.driver.v1.types.Relationship
 import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import scalaj.http._
 
 import scala.util.{Failure, Success}
 import com.sksamuel.elastic4s.http.search.SearchHit
-import spray.json._
+//import spray.json._
 
 import scala.concurrent.Future
 import akka.http.scaladsl.model._
+import akka.stream.ActorMaterializer
+
+import org.json4s._
+import org.json4s.native.JsonMethods.{parse=>parseJson}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -76,8 +81,9 @@ object APISource extends HttpApp {
     }
 
   def searchWrapper(queryStr: String): String = {
-    var ESResponse = searchElasticSearch(queryStr)
-    "" + compact(render(decompose(ESResponse)))
+    //var ESResponse = searchElasticSearch(queryStr)
+    //"" + compact(render(decompose(ESResponse)))
+    getSeResultOrder(getSeJsonStr(queryStr)).toString()
   }
 
   def searchElasticSearch(queryStr: String): List[Map[String,AnyRef]] = {
@@ -130,17 +136,22 @@ object APISource extends HttpApp {
     true
   }
 
-  def getSeJSONString(queryStr: String): String = {
-    val seURL = "https://sanctionsexplorer.org/search/sdn?all_fields=" + queryStr
-    print(s"Getting search order from: $seURL")
+  def getSeJsonStr(queryStr: String): String = {
+    val seURL = ("https://sanctionsexplorer.org/search/sdn?all_fields=" + queryStr).replace(" ", "%20")
+    println(s"Sending request to $seURL")
+    val response: scalaj.http.HttpResponse[String] = scalaj.http.Http(seURL).asString
+    response.body.toString
+  }
 
-    val responseFuture: Future[HttpResponse] = Http().singleRequest(HttpRequest(uri = "http://akka.io"))
+  def getSeResultOrder(searchResponseStr: String): List[String] = {
+    val seJSON = parseJson(searchResponseStr)
+    seJSON.children.map(getIDFromChild)
+  }
 
-    responseFuture
-      .onComplete {
-        case Success(res) => Unmarshal(res.entity).to[String]
-        case Failure(_)   => "Error"
-      }
+  def getIDFromChild(child: JValue): String = {
+    val ch = (child \ "fixed_ref").extract[String]
+    println(ch)
+    ch
   }
 
   def parseSearchHit(hit: SearchHit): Map[String, AnyRef] = {
