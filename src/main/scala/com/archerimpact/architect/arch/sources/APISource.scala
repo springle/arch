@@ -87,15 +87,20 @@ object APISource extends HttpApp {
     println(s"Searching for $fullQueryStr")
 
     val seJSONStr = getSeJsonStr(fullQueryStr)
+
     val resultIDS = getSeResultIDs(seJSONStr)
     val resultScores = getResultScores(seJSONStr)
+
+    val totalResults = getTotalResults(seJSONStr)
+    println(totalResults)
+
     val triedResults = resultIDS zip resultScores map {resultTuple =>
       Try(getNodeInfo(resultTuple._1) + ("exact" -> (resultTuple._2.toDouble > 200.0)))
     }
     println(triedResults.size)
     val amendedResults = triedResults.collect{ case Success(r) => r}
     println(amendedResults.size)
-    "" + compact(render(decompose(amendedResults)))
+    s"""{"totalResults":$totalResults,"from":$from,"size":$size,"results":""" + compact(render(decompose(amendedResults)))
   }
 
 //  def searchElasticSearch(queryStr: String): List[Map[String,AnyRef]] = {
@@ -167,6 +172,11 @@ object APISource extends HttpApp {
 
   def getIDsFromChild(child: JValue): List[String] = {
     (child \ "fixed_ref").extract[List[String]]
+  }
+
+  def getTotalResults(searchResponseStr: String): Int = {
+    val seJSON = parseJson(searchResponseStr)
+    (seJSON \ "num_results").extract[Int]
   }
 
   def parseSearchHit(hit: SearchHit): Map[String, AnyRef] = {
