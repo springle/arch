@@ -3,7 +3,7 @@ package com.archerimpact.architect.arch.shipments
 object GraphShipment {
 
   def global(id: String, url: String): String =
-    s"$url/$id".replace("'","").replace("\"","").replace("\\","")
+    s"$id".replace("'","").replace("\"","").replace("\\","")
 
   /* Enforce global uniqueness on entities */
   def globalEntities(entities: List[Entity], url: String): List[Entity] =

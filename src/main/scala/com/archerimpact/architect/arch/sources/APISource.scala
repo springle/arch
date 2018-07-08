@@ -2,9 +2,10 @@ package com.archerimpact.architect.arch
 
 import akka.actor.{ActorRef, Props}
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest}
 import akka.http.scaladsl.server.{Directive1, HttpApp, Route}
-import akka.http.scaladsl.unmarshalling.FromRequestUnmarshaller
+import akka.http.scaladsl._
+import akka.http.scaladsl.unmarshalling.{FromRequestUnmarshaller, Unmarshal}
 import com.archerimpact.architect.arch.pipes._
 import com.archerimpact.architect.arch.shipments.UrlShipment
 import com.sksamuel.elastic4s.http.{ElasticDsl, RequestFailure}
@@ -20,8 +21,13 @@ import org.json4s.Extraction._
 import org.neo4j.driver.v1.types.Relationship
 import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+
+import scala.util.{Failure, Success}
 import com.sksamuel.elastic4s.http.search.SearchHit
 import spray.json._
+
+import scala.concurrent.Future
+import akka.http.scaladsl.model._
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -122,6 +128,19 @@ object APISource extends HttpApp {
       if (!tokens2.contains(tok1)) return false
     }
     true
+  }
+
+  def getSeJSONString(queryStr: String): String = {
+    val seURL = "https://sanctionsexplorer.org/search/sdn?all_fields=" + queryStr
+    print(s"Getting search order from: $seURL")
+
+    val responseFuture: Future[HttpResponse] = Http().singleRequest(HttpRequest(uri = "http://akka.io"))
+
+    responseFuture
+      .onComplete {
+        case Success(res) => Unmarshal(res.entity).to[String]
+        case Failure(_)   => "Error"
+      }
   }
 
   def parseSearchHit(hit: SearchHit): Map[String, AnyRef] = {

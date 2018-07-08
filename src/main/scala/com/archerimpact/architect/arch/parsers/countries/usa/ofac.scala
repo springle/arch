@@ -10,7 +10,7 @@ import org.json4s._
 
 class ofac extends JSONParser {
 
-  val source = "OFAC SDN List"
+  val source = "OFAC: "
 
   implicit val formats: DefaultFormats.type = DefaultFormats
   private val inputDateFormat = new SimpleDateFormat("yyyy-mm-dd")
@@ -165,7 +165,7 @@ class ofac extends JSONParser {
     val sanctionEvents = getSanctionEvents(listing \\ "sanctions_entries")
     val sanctionLinks = sanctionEvents.map(sanctionEvent => Link(id, "SANCTIONED_ON", sanctionEvent.id))
 
-    /* Extract locations (filter out empties) */
+    /* TODO: make attributes, Extract locations (filter out empties) */
     val locations = getLocations(listing \\ "Location")
     val locationLinks = locations.map(location => Link(id, "HAS_KNOWN_LOCATION", location.id))
 
@@ -188,6 +188,7 @@ class ofac extends JSONParser {
 
     /* Merge into a single graph to return */
     val mergedGraph = partialGraphs.foldLeft(PartialGraph())(PartialGraph.merge)
-    GraphShipment(mergedGraph.entities, mergedGraph.links, url, source)
+    val listType = url.split("/").last.dropRight(5).toUpperCase
+    GraphShipment(mergedGraph.entities, mergedGraph.links, url, source + listType)
   }
 }
