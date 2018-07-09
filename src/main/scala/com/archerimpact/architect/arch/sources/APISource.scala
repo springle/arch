@@ -110,7 +110,7 @@ object APISource extends HttpApp {
     println("Total Responses:" + triedResults.size)
     println("Non-error responses:" + amendedResults.size)
 
-    s"""{"num_results":$totalResults,"from":$from,"size":$size,"results":""" + compact(render(decompose(amendedResults)))
+    s"""{"num_results":$totalResults,"from":$from,"size":$size,"results":""" + compact(render(decompose(amendedResults))) + "}"
   }
 
 //  def searchElasticSearch(queryStr: String): List[Map[String,AnyRef]] = {
