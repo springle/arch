@@ -48,7 +48,7 @@ object APISource extends HttpApp {
 
   override def routes: Route =
 
-    parameters("search" ? "*", "id" ? "none", "degrees" ? "none", "expandby" ? "*", "exclude" ? "*", "attr" ? "*", "attrVal" ? "*", "from" ? "0", "size" ? "50") { (searchStr, architect_id, degrees, expand, exclude, attr, attrVal, from, size) =>
+    parameters("search" ? "*", "id" ? "none", "degrees" ? "none", "expandby" ? "*", "exclude" ? "*", "attr" ? "*", "attrVal" ? "*", "from" ? "0", "size" ? "25") { (searchStr, architect_id, degrees, expand, exclude, attr, attrVal, from, size) =>
 
       //TODO: secure shit, validate architect id and degrees, no drop table, script tags, escape characters
 
@@ -62,11 +62,18 @@ object APISource extends HttpApp {
             complete(HttpEntity(ContentTypes.`application/json`, "" + singleNodeInfo))
           }
         } case "1" => {
-          val expandJSON = getExpand(architect_id, expand, exclude, attr, attrVal)
+          if (!isValidID(architect_id)) {
+            respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
+              complete(HttpEntity(ContentTypes.`application/json`, "Invalid ID. Please try again with a different id."))
+            }
+          } else {
+            val expandJSON = getExpand(architect_id, expand, exclude, attr, attrVal)
 
-          respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
-            complete(HttpEntity(ContentTypes.`application/json`, "" + expandJSON))
+            respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
+              complete(HttpEntity(ContentTypes.`application/json`, "" + expandJSON))
+            }
           }
+
         } case "none" => {
           respondWithHeader(RawHeader("Access-Control-Allow-Origin", "*")) {
             complete(HttpEntity(ContentTypes.`application/json`, "" + searchWrapper(searchStr, from, size)))
@@ -80,7 +87,11 @@ object APISource extends HttpApp {
 
     }
 
-  def searchWrapper(queryStr: String, from:String = "0", size:String = "50"): String = {
+  def isValidID(id: String): Boolean = {
+    Try(getNodeInfo(id)).isSuccess
+  }
+
+  def searchWrapper(queryStr: String, from:String = "0", size:String = "25"): String = {
     //var ESResponse = searchElasticSearch(queryStr)
     //"" + compact(render(decompose(ESResponse)))
     val fullQueryStr = queryStr + s"&from=$from&size=$size"
@@ -90,17 +101,16 @@ object APISource extends HttpApp {
 
     val resultIDS = getSeResultIDs(seJSONStr)
     val resultScores = getResultScores(seJSONStr)
-
     val totalResults = getTotalResults(seJSONStr)
-    println(totalResults)
 
     val triedResults = resultIDS zip resultScores map {resultTuple =>
       Try(getNodeInfo(resultTuple._1) + ("exact" -> (resultTuple._2.toDouble > 200.0)))
     }
-    println(triedResults.size)
     val amendedResults = triedResults.collect{ case Success(r) => r}
-    println(amendedResults.size)
-    s"""{"totalResults":$totalResults,"from":$from,"size":$size,"results":""" + compact(render(decompose(amendedResults)))
+    println("Total Responses:" + triedResults.size)
+    println("Non-error responses:" + amendedResults.size)
+
+    s"""{"num_results":$totalResults,"from":$from,"size":$size,"results":""" + compact(render(decompose(amendedResults)))
   }
 
 //  def searchElasticSearch(queryStr: String): List[Map[String,AnyRef]] = {
