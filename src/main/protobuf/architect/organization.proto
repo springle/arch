@@ -14,5 +14,6 @@ message organization {
     repeated string emailAddresses = 2;
     repeated string websites = 3;
     repeated string aliases = 4;
-    string notes = 5;
+    repeated string programs = 5;
+    string notes = 6;
 }

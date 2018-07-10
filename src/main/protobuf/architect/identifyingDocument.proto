@@ -15,6 +15,7 @@ message identifyingDocument {
     string issuedBy = 3;
     string issuedIn = 4;
     bool valid = 5;
-    string issuedOn = 6;
-    string notes = 7;
+    string label = 6;
+    string issuedOn = 7;
+    string notes = 8;
 }

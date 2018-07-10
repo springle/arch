@@ -87,7 +87,8 @@ class ofac extends JSONParser {
         val issuedBy = (document \ "issued_by").extract[String]
         val issuedIn = (document \ "issued_in").extract[String]
         val valid = document \ "validity" == JString("Valid")
-        Entity(s"$id/idDoc/$number", identifyingDocument(number, numberType, issuedBy, issuedIn, valid))
+        val label = numberType + ": " + number
+        Entity(s"$id/idDoc/$number", identifyingDocument(number, numberType, issuedBy, issuedIn, valid, label))
       }
     case _ => List[Entity]()
   }
@@ -127,6 +128,12 @@ class ofac extends JSONParser {
       if details != ""
     } yield details
 
+  /* Utility function to get program list */
+  def getPrograms(listing: JValue): List[String] = {
+    val programs = (listing \\ "sanctions_entries").children.map(entry => (entry \ "program")).children.map(prog => prog.extract[List[String]])
+    programs.flatten
+  }
+
   /*
    *    Main function to run on each entry in the OFAC JSON.
    *    Returns a PartialGraph with a list of entities and a list of links.
@@ -144,13 +151,15 @@ class ofac extends JSONParser {
     val websites: List[String] = getDetails(listing, "Website")
     val subtype: String = (listing \ "party_sub_type").extract[String]
     val aliases: List[String] = getAliases(listing \\ "aliases", subtype, id)
+    /* Extract Program */
+    val programs = getPrograms(listing)
 
     /* Determine entity type */
     val proto = (subtype: @unchecked) match {
-      case "Entity"     => organization(name, emailAddresses, websites, aliases)
-      case "Individual" => person(name, dateOfBirth, placeOfBirth, titles, emailAddresses, websites, aliases)
-      case "Vessel"     => vessel(name)
-      case "Aircraft"   => aircraft(name)
+      case "Entity"     => organization(name, emailAddresses, websites, aliases, programs)
+      case "Individual" => person(name, dateOfBirth, placeOfBirth, titles, emailAddresses, websites, aliases, programs)
+      case "Vessel"     => vessel(name, programs)
+      case "Aircraft"   => aircraft(name, programs)
     }
 
     /* Extract ID documents */

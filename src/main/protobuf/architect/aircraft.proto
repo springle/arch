@@ -11,4 +11,5 @@ option (scalapb.options) = {
 
 message aircraft {
     string name = 1;
+    repeated string programs = 2;
 }
