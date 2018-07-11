@@ -131,7 +131,7 @@ class ofac extends JSONParser {
   /* Utility function to get program list */
   def getPrograms(listing: JValue): List[String] = {
     val programs = (listing \\ "sanctions_entries").children.map(entry => (entry \ "program")).children.map(prog => prog.extract[List[String]])
-    programs.flatten
+    programs.flatten.distinct.filter(s => s != null)
   }
 
   /*
