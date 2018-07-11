@@ -19,6 +19,7 @@ message person {
     repeated string aliases = 7;
     repeated string programs = 8;
     repeated string locations = 9;
-    string notes = 10;
-    string nationality = 11;
+    repeated string sanctionEvents = 10;
+    string notes = 11;
+    string nationality = 12;
 }

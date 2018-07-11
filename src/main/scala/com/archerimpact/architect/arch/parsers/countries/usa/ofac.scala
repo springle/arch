@@ -97,6 +97,19 @@ class ofac extends JSONParser {
     case _ => List[Entity]()
   }
 
+  def getSanctionEventsAsAttributes(jv: JValue): List[String] = jv match {
+    case JArray(sanctionEntries) =>
+      for {
+        sanctionEntry <- sanctionEntries.children
+        entryEvent <- (sanctionEntry \ "entry_events").children
+      } yield {
+        val date = inputDateFormat.parse(entryEvent(0).extract[String])
+        val description = entryEvent(1).extract[String]
+        s"${inputDateFormat.format(date)}/$description"
+      }
+    case _ => List[String]()
+  }
+
   /* Utility function to extract identifying documents */
   def getIdentifyingDocuments(jv: JValue, id: String): List[Entity] = jv match {
     case JArray(documents) =>
@@ -173,13 +186,14 @@ class ofac extends JSONParser {
     /* Extract Program */
     val programs = getPrograms(listing)
     val locs = getLocationsAsAttribute(listing \\ "Location")
+    val sanctionEvents = getSanctionEventsAsAttributes(listing \\ "sanctions_entries")
 
     /* Determine entity type */
     val proto = (subtype: @unchecked) match {
-      case "Entity"     => organization(name, emailAddresses, websites, aliases, programs, locs)
-      case "Individual" => person(name, dateOfBirth, placeOfBirth, titles, emailAddresses, websites, aliases, programs, locs)
-      case "Vessel"     => vessel(name, programs, locs)
-      case "Aircraft"   => aircraft(name, programs, locs)
+      case "Entity"     => organization(name, emailAddresses, websites, aliases, programs, locs, sanctionEvents)
+      case "Individual" => person(name, dateOfBirth, placeOfBirth, titles, emailAddresses, websites, aliases, programs, locs, sanctionEvents)
+      case "Vessel"     => vessel(name, programs, locs, sanctionEvents)
+      case "Aircraft"   => aircraft(name, programs, locs, sanctionEvents)
     }
 
     /* Extract ID documents */
@@ -191,8 +205,8 @@ class ofac extends JSONParser {
     //val aliasLinks = aliases.map(alias => Link(id, "AKA", alias.id))
 
     /* Extract sanction events */
-    val sanctionEvents = getSanctionEvents(listing \\ "sanctions_entries")
-    val sanctionLinks = sanctionEvents.map(sanctionEvent => Link(id, "SANCTIONED_ON", sanctionEvent.id))
+    //val sanctionEvents = getSanctionEvents(listing \\ "sanctions_entries")
+    //val sanctionLinks = sanctionEvents.map(sanctionEvent => Link(id, "SANCTIONED_ON", sanctionEvent.id))
 
     /* TODO: make attributes, Extract locations (filter out empties) */
     //val locations = getLocations(listing \\ "Location")
@@ -205,8 +219,8 @@ class ofac extends JSONParser {
     val primaryEntity = Entity(id, proto)
 
     /* Generate partial graph */
-    val entities = primaryEntity :: idDocs ::: sanctionEvents
-    val links = officialLinks ::: idDocLinks ::: sanctionLinks
+    val entities = primaryEntity :: idDocs
+    val links = officialLinks ::: idDocLinks
     PartialGraph(entities, links)
   }
 
