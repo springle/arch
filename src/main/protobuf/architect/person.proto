@@ -18,6 +18,7 @@ message person {
     repeated string websites = 6;
     repeated string aliases = 7;
     repeated string programs = 8;
-    string notes = 9;
-    string nationality = 10;
+    repeated string locations = 9;
+    string notes = 10;
+    string nationality = 11;
 }

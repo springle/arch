@@ -12,4 +12,5 @@ option (scalapb.options) = {
 message vessel {
     string name = 1;
     repeated string programs = 2;
+    repeated string locations = 3;
 }

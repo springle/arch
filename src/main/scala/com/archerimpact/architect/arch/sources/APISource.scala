@@ -425,14 +425,24 @@ object APISource extends HttpApp {
       case Right(results) => {
         var matchHit = results.result.hits.hits(0)
         var retMap = matchHit.sourceAsMap
-        retMap.+=("type" -> matchHit.`type`)
+        retMap.+=("type" -> formatType(matchHit.`type`))
         retMap.+=("id" -> matchHit.id)
         elasticClient.close()
         retMap
       }
     }
 
+  }
 
+  def formatType(tp: String): String = {
+    tp match {
+      case "identifyingDocument" => "Identifying Document"
+      case "person" => "Person"
+      case "organization" => "Organization"
+      case "vessel" => "Vessel"
+      case "aircraft" => "Aircraft"
+      case _ => tp
+    }
   }
 
   def getSingleNodeResponse(architect_id: String): String = {

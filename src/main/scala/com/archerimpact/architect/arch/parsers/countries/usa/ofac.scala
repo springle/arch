@@ -60,6 +60,25 @@ class ofac extends JSONParser {
     case _ => List[Entity]()
   }
 
+  def getLocationsAsAttribute(jv: JValue): List[String] = jv match {
+    case JArray(locations) => {
+      val addresses = for (location <- locations.children) yield {
+        val line1 = (location \\ "ADDRESS1").extractOpt[String].getOrElse("")
+        val line2 = (location \\ "ADDRESS2").extractOpt[String].getOrElse("")
+        val line3 = (location \\ "ADDRESS3").extractOpt[String].getOrElse("")
+        val city = (location \\ "CITY").extractOpt[String].getOrElse("")
+        val region = (location \\ "STATE/PROVINCE").extractOpt[String].getOrElse("")
+        val zipCode = (location \\ "POSTAL CODE").extractOpt[String].getOrElse("")
+        val country = (location \\ "COUNTRY").extractOpt[String].getOrElse("")
+        val combined = List(line1, line2, line3, city, region, zipCode, country).filter(s => s != "").map(s => s.stripPrefix(" ")).mkString(", ")
+        combined.toString
+      }
+      addresses.filter(s => s != "" && s != null)
+      //addresses.filter(address => address.toString.count(c => c == ',') > 1)  // filter out non-specific addresses
+    }
+    case _ => List[String]()
+  }
+
   /* Utility function to extract sanction events */
   def getSanctionEvents(jv: JValue): List[Entity] = jv match {
     case JArray(sanctionEntries) =>
@@ -153,13 +172,14 @@ class ofac extends JSONParser {
     val aliases: List[String] = getAliases(listing \\ "aliases", subtype, id)
     /* Extract Program */
     val programs = getPrograms(listing)
+    val locs = getLocationsAsAttribute(listing \\ "Location")
 
     /* Determine entity type */
     val proto = (subtype: @unchecked) match {
-      case "Entity"     => organization(name, emailAddresses, websites, aliases, programs)
-      case "Individual" => person(name, dateOfBirth, placeOfBirth, titles, emailAddresses, websites, aliases, programs)
-      case "Vessel"     => vessel(name, programs)
-      case "Aircraft"   => aircraft(name, programs)
+      case "Entity"     => organization(name, emailAddresses, websites, aliases, programs, locs)
+      case "Individual" => person(name, dateOfBirth, placeOfBirth, titles, emailAddresses, websites, aliases, programs, locs)
+      case "Vessel"     => vessel(name, programs, locs)
+      case "Aircraft"   => aircraft(name, programs, locs)
     }
 
     /* Extract ID documents */
@@ -175,8 +195,8 @@ class ofac extends JSONParser {
     val sanctionLinks = sanctionEvents.map(sanctionEvent => Link(id, "SANCTIONED_ON", sanctionEvent.id))
 
     /* TODO: make attributes, Extract locations (filter out empties) */
-    val locations = getLocations(listing \\ "Location")
-    val locationLinks = locations.map(location => Link(id, "HAS_KNOWN_LOCATION", location.id))
+    //val locations = getLocations(listing \\ "Location")
+    //val locationLinks = locations.map(location => Link(id, "HAS_KNOWN_LOCATION", location.id))
 
     /* Extract official links */
     val officialLinks = getLinks(id, listing \ "linked_profiles")
@@ -185,8 +205,8 @@ class ofac extends JSONParser {
     val primaryEntity = Entity(id, proto)
 
     /* Generate partial graph */
-    val entities = primaryEntity :: idDocs ::: sanctionEvents ::: locations
-    val links = officialLinks ::: idDocLinks ::: sanctionLinks ::: locationLinks
+    val entities = primaryEntity :: idDocs ::: sanctionEvents
+    val links = officialLinks ::: idDocLinks ::: sanctionLinks
     PartialGraph(entities, links)
   }
 
