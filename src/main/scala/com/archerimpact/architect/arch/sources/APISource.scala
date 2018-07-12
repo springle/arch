@@ -427,6 +427,7 @@ object APISource extends HttpApp {
         var retMap = matchHit.sourceAsMap
         retMap.+=("type" -> formatType(matchHit.`type`))
         retMap.+=("id" -> matchHit.id)
+        //println(getLinksCountForNode(matchHit.id))
         elasticClient.close()
         retMap
       }
@@ -450,6 +451,30 @@ object APISource extends HttpApp {
     lb.+=(getNodeInfo(architect_id))
     val jsonData: String = compact(render(decompose(lb)))
     s"""{"nodes" : $jsonData, "links": []}"""
+  }
+
+  def getLinksCountForNode(architect_id: String): Int = {
+    val neo4jDriver = newNeo4jSession()
+    val neo4jSession = neo4jDriver.session
+    var fullQuery = s"""MATCH (n1)-[r]-() WHERE n1.architectId = '$architect_id' RETURN COUNT(r) as linksCount"""
+
+    var resp = neo4jSession.run(fullQuery)
+
+    //extract info from neo4j records response
+    var hN = resp.hasNext
+    if (!hN) {
+      neo4jDriver.close()
+      neo4jSession.close()
+      return 0
+    }
+
+    var record = resp.next()
+    var count = record.get("linksCount")
+
+    neo4jDriver.close()
+    neo4jSession.close()
+
+    count.asInt()
   }
 
   def getRawNodesAndRelationships(architect_id: String, degrees: String): rawDataCarrier = {
