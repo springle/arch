@@ -528,10 +528,14 @@ object APISource extends HttpApp {
       cleanEnd = cleanEnd.substring(1, cleanEnd.length-1)
 
       var relMap = mutable.Map[String, String]()
-      relMap.+=("source" -> cleanStart.toString)
+
+      //TODO: FLIP BACK SOURCE AND TARGET -- they were flipped hackily on 7/12/18
+      //relMap.+=("source" -> cleanStart.toString)
+      relMap.+=("target" -> cleanStart.toString) //delete
       relMap.+=("type" -> relation.`type`.toString)
-      relMap.+=("target" -> cleanEnd.toString)
-      relMap.+=("id" -> ("" + cleanStart.toString + relation.`type`.toString + cleanEnd.toString))
+      //relMap.+=("target" -> cleanEnd.toString)
+      relMap.+=("source" -> cleanEnd.toString) //delete
+      relMap.+=("id" -> ("" + cleanEnd.toString + relation.`type`.toString + cleanStart.toString)) //Flip back too!
 
       relationshipTuples.+=(relMap.toMap)
     }
