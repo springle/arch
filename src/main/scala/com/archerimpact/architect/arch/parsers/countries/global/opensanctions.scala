@@ -88,12 +88,55 @@ class opensanctions extends CSVParser {
         PartialGraph(entities, links)
   }
 
+  def nqCoGraph(params: String*): PartialGraph = params match {
+    case Seq(coID, name, countryOfOperation, countryOfOrigin, industrySector, businessType,
+    website, directorNames, accusedOf, raLinkID, connectionDesc, workerID) => {
+      println(s"ID: $coID, name: $name")
+      println(params)
+
+      val coEntity = Entity(coID, organization(name=name))
+      if (raLinkID == null || raLinkID == "null") {
+        return PartialGraph(List(coEntity))
+      }
+      val raEntity = Entity(raLinkID, organization(name=raLinkID))
+      val coToRaLink = Link(coID, "connected_to", raLinkID)
+      PartialGraph(List(coEntity, raEntity), List(coToRaLink))
+    }
+  }
+
+  def nqRAGraph(params: String*): PartialGraph = params match {
+    case Seq(coID, name, countryOfOperation, countryOfOrigin, industrySector, businessType,
+    website, directorNames, accusedOf, raLinkID, connectionDesc, workerID) => {
+      println(s"ID: $coID, name: $name")
+      println(params)
+
+      val coEntity = Entity(coID, organization(name=name))
+      if (raLinkID == null || raLinkID == "null") {
+        return PartialGraph(List(coEntity))
+      }
+      val raEntity = Entity(raLinkID, organization(name=raLinkID))
+      val coToRaLink = Link(coID, "connected_to", raLinkID)
+      PartialGraph(List(coEntity, raEntity), List(coToRaLink))
+    }
+  }
+
   override def mkGraph(url: String, params: String*): PartialGraph = url match {
-    case _ if url.endsWith("un_sc_sanctions_addresses.csv") => addressesGraph(params: _*)
-    case _ if url.endsWith("un_sc_sanctions_aliases.csv") => aliasesGraph(params: _*)
-    case _ if url.endsWith("un_sc_sanctions_birth_dates.csv") => birthDatesGraph(params: _*)
-    case _ if url.endsWith("un_sc_sanctions_identifiers.csv") => identifiersGraph(params: _*)
-    case _ if url.endsWith("un_sc_sanctions_nationalities.csv") => nationalitiesGraph(params: _*)
-    case _ if url.endsWith("un_sc_sanctions.csv") => sanctionsGraph(params: _*)
+//    case _ if url.endsWith("un_sc_sanctions_addresses.csv") => addressesGraph(params: _*)
+//    case _ if url.endsWith("un_sc_sanctions_aliases.csv") => aliasesGraph(params: _*)
+//    case _ if url.endsWith("un_sc_sanctions_birth_dates.csv") => birthDatesGraph(params: _*)
+//    case _ if url.endsWith("un_sc_sanctions_identifiers.csv") => identifiersGraph(params: _*)
+//    case _ if url.endsWith("un_sc_sanctions_nationalities.csv") => nationalitiesGraph(params: _*)
+//    case _ if url.endsWith("un_sc_sanctions.csv") => sanctionsGraph(params: _*)
+
+    case _ if url.endsWith("un_sc_sanctions_addresses.csv") => PartialGraph(List(), List())
+    case _ if url.endsWith("un_sc_sanctions_aliases.csv") => PartialGraph(List(), List())
+    case _ if url.endsWith("un_sc_sanctions_birth_dates.csv") => PartialGraph(List(), List())
+    case _ if url.endsWith("un_sc_sanctions_identifiers.csv") => PartialGraph(List(), List())
+    case _ if url.endsWith("un_sc_sanctions_nationalities.csv") => PartialGraph(List(), List())
+    case _ if url.endsWith("un_sc_sanctions.csv") => PartialGraph(List(), List())
+    case _ if url.endsWith("nq-companies.csv") => {
+      nqCoGraph(params: _*)
+    }
+
   }
 }

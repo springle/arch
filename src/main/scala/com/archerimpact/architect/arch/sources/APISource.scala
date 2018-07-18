@@ -97,71 +97,76 @@ object APISource extends HttpApp {
     val fullQueryStr = queryStr + s"&from=$from&size=$size"
     println(s"Searching for $fullQueryStr")
 
-    val seJSONStr = getSeJsonStr(fullQueryStr)
+//    val seJSONStr = getSeJsonStr(fullQueryStr)
+//
+//    val resultIDS = getSeResultIDs(seJSONStr)
+//    val resultScores = getResultScores(seJSONStr)
+//    val totalResults = getTotalResults(seJSONStr)
+//
+//    val triedResults = resultIDS zip resultScores map {resultTuple =>
+//      Try(getNodeInfo(resultTuple._1) + ("exact" -> (resultTuple._2.toDouble > 200.0)))
+//    }
+//    val amendedResults = triedResults.collect{ case Success(r) => r}
+//    println("Total Responses:" + triedResults.size)
+//    println("Non-error responses:" + amendedResults.size)
+//
+//    s"""{"num_results":$totalResults,"from":$from,"size":$size,"results":""" + compact(render(decompose(amendedResults))) + "}"
 
-    val resultIDS = getSeResultIDs(seJSONStr)
-    val resultScores = getResultScores(seJSONStr)
-    val totalResults = getTotalResults(seJSONStr)
-
-    val triedResults = resultIDS zip resultScores map {resultTuple =>
-      Try(getNodeInfo(resultTuple._1) + ("exact" -> (resultTuple._2.toDouble > 200.0)))
-    }
-    val amendedResults = triedResults.collect{ case Success(r) => r}
-    println("Total Responses:" + triedResults.size)
-    println("Non-error responses:" + amendedResults.size)
-
-    s"""{"num_results":$totalResults,"from":$from,"size":$size,"results":""" + compact(render(decompose(amendedResults))) + "}"
+    val results = searchElasticSearch(queryStr)
+    val sortedResults = sortResults(queryStr, results)
+    val resultStr = compact(render(decompose(sortedResults)))
+    s"""{"results": $resultStr}"""
   }
 
-//  def searchElasticSearch(queryStr: String): List[Map[String,AnyRef]] = {
-//    val elasticClient = newElasticClient()
-//
-//    val resp = elasticClient.execute{
-//      search("entities*") query queryStr limit 50
-//    }.await
-//
-//    resp match {
-//      case Left(failure) => {
-//        elasticClient.close()
-//        List()
-//      }
-//      case Right(results) => {
-//        var matchHits = results.result.hits.hits
-//        elasticClient.close()
-//        sortResults(queryStr, matchHits.toList.map(parseSearchHit))
-//      }
-//    }
-//  }
-//
-//  def sortResults(searchQuery: String, searchResults: List[Map[String, AnyRef]]): List[Map[String, AnyRef]] = {
-//    var topList = mutable.ListBuffer[Map[String, AnyRef]]()
-//    var bottomList = mutable.ListBuffer[Map[String, AnyRef]]()
-//
-//    var compareQueryStr = normalize(searchQuery)
-//    //print(searchResults)
-//    for (hit <- searchResults) {
-//      var name = hit.getOrElse("name", "no name found on this entity").toString
-//      if (tokenCompare(normalize(name), compareQueryStr)) {
-//        topList.+=(hit + ("exact" -> "true"))
-//      } else {
-//        bottomList.+=(hit)
-//      }
-//    }
-//    bottomList.++=:(topList).toList
-//  }
-//
-//  def normalize(txt: String): String = {
-//    txt.toLowerCase.replaceAll(",", "")
-//  }
-//
-//  def tokenCompare(txt1: String, txt2: String): Boolean = {
-//    var tokens1 = txt1.split(" ")
-//    var tokens2 = txt2.split(" ")
-//    for (tok1 <- tokens1) {
-//      if (!tokens2.contains(tok1)) return false
-//    }
-//    true
-//  }
+  def searchElasticSearch(queryStr: String): List[Map[String,AnyRef]] = {
+    val elasticClient = newElasticClient()
+
+    val resp = elasticClient.execute{
+      search("entities*") query queryStr limit 50
+    }.await
+
+    resp match {
+      case Left(failure) => {
+        elasticClient.close()
+        List()
+      }
+      case Right(results) => {
+        var matchHits = results.result.hits.hits
+        elasticClient.close()
+        sortResults(queryStr, matchHits.toList.map(parseSearchHit))
+      }
+    }
+  }
+
+  def sortResults(searchQuery: String, searchResults: List[Map[String, AnyRef]]): List[Map[String, AnyRef]] = {
+    var topList = mutable.ListBuffer[Map[String, AnyRef]]()
+    var bottomList = mutable.ListBuffer[Map[String, AnyRef]]()
+
+    var compareQueryStr = normalize(searchQuery)
+    //print(searchResults)
+    for (hit <- searchResults) {
+      var name = hit.getOrElse("name", "no name found on this entity").toString
+      if (tokenCompare(normalize(name), compareQueryStr)) {
+        topList.+=(hit + ("exact" -> "true"))
+      } else {
+        bottomList.+=(hit)
+      }
+    }
+    bottomList.++=:(topList).toList
+  }
+
+  def normalize(txt: String): String = {
+    txt.toLowerCase.replaceAll(",", "")
+  }
+
+  def tokenCompare(txt1: String, txt2: String): Boolean = {
+    var tokens1 = txt1.split(" ")
+    var tokens2 = txt2.split(" ")
+    for (tok1 <- tokens1) {
+      if (!tokens2.contains(tok1)) return false
+    }
+    true
+  }
 
   def getSeJsonStr(queryStr: String): String = {
     val seURL = ("https://sanctionsexplorer.org/search/sdn?all_fields=" + queryStr).replace(" ", "%20")
