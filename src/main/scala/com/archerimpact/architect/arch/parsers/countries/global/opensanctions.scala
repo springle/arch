@@ -5,7 +5,7 @@ import com.archerimpact.architect.arch.shipments.{Entity, Link, PartialGraph}
 import com.archerimpact.architect.ontology._
 
 class opensanctions extends CSVParser {
-  val source = "Open Sanctions"
+  val source = "Amnesty Int."
 
   def birthDatesGraph(params: String*): PartialGraph = PartialGraph()  // TODO: integrate without overwriting
   def nationalitiesGraph(params: String*): PartialGraph = PartialGraph()  // TODO: integrate without overwriting
@@ -98,25 +98,35 @@ class opensanctions extends CSVParser {
       if (raLinkID == null || raLinkID == "null") {
         return PartialGraph(List(coEntity))
       }
-      val raEntity = Entity(raLinkID, organization(name=raLinkID))
-      val coToRaLink = Link(coID, "connected_to", raLinkID)
+
+      val cleanedRaID = raLinkID.replace(" ", "")
+
+      val raEntity = Entity(cleanedRaID, organization(name=cleanedRaID))
+      val coToRaLink = Link(coID, "connected_to", cleanedRaID)
       PartialGraph(List(coEntity, raEntity), List(coToRaLink))
     }
   }
 
   def nqRAGraph(params: String*): PartialGraph = params match {
-    case Seq(coID, name, countryOfOperation, countryOfOrigin, industrySector, businessType,
-    website, directorNames, accusedOf, raLinkID, connectionDesc, workerID) => {
-      println(s"ID: $coID, name: $name")
+    case Seq(raID, otherIDRange, name, countryOfOperation, countryOfOrigin, industrySector, businessType,
+    website, directorNames, accusedOf, raLinkID, connectionDesc, workerID, other1, other2, other3, other4, other5) => {
+      println(s"Agency |ID: $raID, name: $name")
       println(params)
 
-      val coEntity = Entity(coID, organization(name=name))
-      if (raLinkID == null || raLinkID == "null") {
-        return PartialGraph(List(coEntity))
+      var prod_name = name
+      if (name == "null" || name == null) {
+        prod_name = "null"
       }
-      val raEntity = Entity(raLinkID, organization(name=raLinkID))
-      val coToRaLink = Link(coID, "connected_to", raLinkID)
-      PartialGraph(List(coEntity, raEntity), List(coToRaLink))
+
+      val cleanedRaID = raID.replace(" ", "")
+
+      val raEntity = Entity(cleanedRaID, organization(name=prod_name))
+//      if (raLinkID == null || raLinkID == "null") {
+//        return PartialGraph(List(coEntity))
+//      }
+//      val raEntity = Entity(raLinkID, organization(name=raLinkID))
+//      val coToRaLink = Link(coID, "connected_to", raLinkID)
+      PartialGraph(List(raEntity), List[Link]())
     }
   }
 
@@ -136,6 +146,9 @@ class opensanctions extends CSVParser {
     case _ if url.endsWith("un_sc_sanctions.csv") => PartialGraph(List(), List())
     case _ if url.endsWith("nq-companies.csv") => {
       nqCoGraph(params: _*)
+    }
+    case _ if url.endsWith("nq-agencies.csv") => {
+      nqRAGraph(params: _*)
     }
 
   }
