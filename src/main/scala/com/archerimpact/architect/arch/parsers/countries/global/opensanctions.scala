@@ -5,7 +5,7 @@ import com.archerimpact.architect.arch.shipments.{Entity, Link, PartialGraph}
 import com.archerimpact.architect.ontology._
 
 class opensanctions extends CSVParser {
-  val source = "Amnesty Int."
+  val source = "Amnesty DVC"
 
   def birthDatesGraph(params: String*): PartialGraph = PartialGraph()  // TODO: integrate without overwriting
   def nationalitiesGraph(params: String*): PartialGraph = PartialGraph()  // TODO: integrate without overwriting
@@ -89,44 +89,69 @@ class opensanctions extends CSVParser {
   }
 
   def nqCoGraph(params: String*): PartialGraph = params match {
-    case Seq(coID, name, countryOfOperation, countryOfOrigin, industrySector, businessType,
-    website, directorNames, accusedOf, raLinkID, connectionDesc, workerID) => {
-      println(s"ID: $coID, name: $name")
-      println(params)
-
-      val coEntity = Entity(coID, organization(name=name))
-      if (raLinkID == null || raLinkID == "null") {
-        return PartialGraph(List(coEntity))
+    case Seq(coID, raLinkID, name, countryOfOperation, countryOfOrigin, industrySector, businessType,
+    website, directorNames, accusedOf, connectionDesc, workerID, companyAddress, sisterCompany, jointVenture, phoneNumber, crNumber, aliases) =>
+    {
+      if (name==null || name=="") {
+        return PartialGraph(List[Entity](), List[Link]())
       }
 
-      val cleanedRaID = raLinkID.replace(" ", "")
+      val coEntity = List(Entity(coID, company(name=name, countryOfOperation=countryOfOperation, countryOfOrigin=countryOfOrigin,
+        industrySector=industrySector, businessType=businessType, website=website, accusedOf=accusedOf, companyAddress=companyAddress,
+        sisterCompany=sisterCompany, jointVenture=jointVenture, phoneNumber=phoneNumber, crNumber=crNumber, aliases=aliases)))
 
-      val raEntity = Entity(cleanedRaID, organization(name=cleanedRaID))
-      val coToRaLink = Link(coID, "connected_to", cleanedRaID)
-      PartialGraph(List(coEntity, raEntity), List(coToRaLink))
+      val directorEntities = directorNames match {
+        case null => List[Entity]()
+        case "null" => List[Entity]()
+        case _ => List(Entity(s"$coID/director", person(name=directorNames)))
+      }
+
+      val raEntities = raLinkID match {
+        case null => List[Entity]()
+        case "null" => List[Entity]()
+        case _ => {
+          val cleanedRaID = raLinkID.replace(" ", "")
+          List(Entity(cleanedRaID, recruitingAgency(notes=cleanedRaID)))
+        }
+      }
+
+      val dirLinks = directorEntities.map(dir => Link(dir.id, "director_of", coID))
+      val raLinks = raEntities.map(ra => Link(coID, "connected_to", ra.id))
+
+      val allEntities = coEntity ++ directorEntities ++ raEntities
+      val allLinks = raLinks ++ dirLinks
+
+      PartialGraph(allEntities, allLinks)
     }
   }
 
   def nqRAGraph(params: String*): PartialGraph = params match {
-    case Seq(raID, otherIDRange, name, countryOfOperation, countryOfOrigin, industrySector, businessType,
-    website, directorNames, accusedOf, raLinkID, connectionDesc, workerID, other1, other2, other3, other4, other5) => {
-      println(s"Agency |ID: $raID, name: $name")
-      println(params)
-
-      var prod_name = name
-      if (name == "null" || name == null) {
-        prod_name = "null"
+    case Seq(raID, otherIDRange, name, governmentIDNumber, faxNumber, locationOfOrigin, locationOfOperation,
+    numberOfWorkersSentAbroad, directorNames, recruitmentSector, yearsInOperation, accusedOf, webSources, archiveSources,
+    generalSource, workerIDs, agencyAddress, other1, other2, other3) =>
+    {
+      if (name==null || name=="") {
+        return PartialGraph(List[Entity](), List[Link]())
       }
 
-      val cleanedRaID = raID.replace(" ", "")
+      //this protobuff creation is fucked up somehow
+      val coEntity = List(Entity(raID, recruitingAgency(notes=raID, name=name, governmentIDNumber=governmentIDNumber, faxNumber=faxNumber,
+        locationOfOrigin=locationOfOrigin, locationOfOperation=locationOfOperation, numberOfWorkersSentAbroad=numberOfWorkersSentAbroad,
+        recruitmentSector=recruitmentSector, yearsInOperation=yearsInOperation, accusedOf=accusedOf, webSources=webSources,
+        archiveSources=archiveSources, agencyAddress=agencyAddress)))
 
-      val raEntity = Entity(cleanedRaID, organization(name=prod_name))
-//      if (raLinkID == null || raLinkID == "null") {
-//        return PartialGraph(List(coEntity))
-//      }
-//      val raEntity = Entity(raLinkID, organization(name=raLinkID))
-//      val coToRaLink = Link(coID, "connected_to", raLinkID)
-      PartialGraph(List(raEntity), List[Link]())
+      val directorEntities = directorNames match {
+        case null => List[Entity]()
+        case "null" => List[Entity]()
+        case _ => List(Entity(s"$raID/director", person(name=directorNames)))
+      }
+
+      val dirLinks = directorEntities.map(dir => Link(dir.id, "director_of", raID))
+
+      val allEntities = coEntity ++ directorEntities
+      val allLinks = dirLinks
+
+      PartialGraph(allEntities, allLinks)
     }
   }
 
@@ -144,6 +169,9 @@ class opensanctions extends CSVParser {
     case _ if url.endsWith("un_sc_sanctions_identifiers.csv") => PartialGraph(List(), List())
     case _ if url.endsWith("un_sc_sanctions_nationalities.csv") => PartialGraph(List(), List())
     case _ if url.endsWith("un_sc_sanctions.csv") => PartialGraph(List(), List())
+    case _ if url.endsWith("nq-people.csv") => {
+      PartialGraph(List(), List())
+    }
     case _ if url.endsWith("nq-companies.csv") => {
       nqCoGraph(params: _*)
     }

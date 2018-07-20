@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package architect;
+
+import "scalapb/scalapb.proto";
+
+option (scalapb.options) = {
+    package_name: "com.archerimpact.architect.ontology"
+    flat_package: true
+};
+
+message company {
+    string name = 1;
+    string countryOfOperation = 2;
+    string countryOfOrigin = 3;
+    string industrySector = 4;
+    string businessType = 5;
+    string website = 6;
+    string accusedOf = 7;
+    string companyAddress = 8;
+    string sisterCompany = 9;
+    string jointVenture = 10;
+    string phoneNumber = 11;
+    string crNumber = 12;
+    string aliases = 13;
+    string notes = 14;
+}
+
